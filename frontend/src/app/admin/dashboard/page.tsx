@@ -1,25 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  BookOpen,
-  DollarSign,
-  MoreVertical,
-  Search,
-  Shield,
-  TrendingUp,
-  UserPlus,
-  Users,
-} from 'lucide-react';
+import { BookOpen, Calendar, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -28,50 +14,23 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { getToken } from '@/lib/auth';
+import { apiRequest } from '@/lib/api';
+import { clearToken, getToken } from '@/lib/auth';
 
-const stats = [
-  {
-    label: 'Total de Alunos',
-    value: '12.458',
-    change: '+12%',
-    up: true,
-    icon: Users,
-    color: 'hsl(262,80%,50%)',
-  },
-  {
-    label: 'Cursos Ativos',
-    value: '87',
-    change: '+5',
-    up: true,
-    icon: BookOpen,
-    color: 'hsl(168,70%,45%)',
-  },
-  {
-    label: 'Taxa de Conclusao',
-    value: '73%',
-    change: '+3%',
-    up: true,
-    icon: TrendingUp,
-    color: 'hsl(40,90%,55%)',
-  },
-  {
-    label: 'Receita Mensal',
-    value: 'R$ 89.4k',
-    change: '-2%',
-    up: false,
-    icon: DollarSign,
-    color: 'hsl(340,80%,55%)',
-  },
-];
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: string;
+};
 
-const recentUsers = [
-  { name: 'Ana Silva', email: 'ana@email.com', role: 'Aluno', status: 'Ativo', joined: '12/03/2026' },
-  { name: 'Carlos Oliveira', email: 'carlos@email.com', role: 'Professor', status: 'Ativo', joined: '10/03/2026' },
-  { name: 'Maria Santos', email: 'maria@email.com', role: 'Aluno', status: 'Pendente', joined: '09/03/2026' },
-  { name: 'Joao Costa', email: 'joao@email.com', role: 'Aluno', status: 'Ativo', joined: '08/03/2026' },
-  { name: 'Fernanda Lima', email: 'fernanda@email.com', role: 'Professor', status: 'Ativo', joined: '07/03/2026' },
-];
+type Course = {
+  id: string;
+  title: string;
+  description?: string | null;
+  createdAt: string;
+};
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -84,13 +43,55 @@ const fadeUp = {
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const formatDate = (value: string) =>
+    new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(value));
 
   useEffect(() => {
     const token = getToken();
     if (!token) {
       router.replace('/login');
+      return;
     }
+
+    setLoading(true);
+    Promise.all([
+      apiRequest<User>('/users/me', { token }),
+      apiRequest<Course[]>('/courses', { token }),
+    ])
+      .then(([userResponse, coursesResponse]) => {
+        if (userResponse.role !== 'ADMIN') {
+          router.replace('/dashboard');
+          return;
+        }
+        setUser(userResponse);
+        setCourses(coursesResponse);
+        setError('');
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Erro ao carregar dados.');
+        clearToken();
+      })
+      .finally(() => setLoading(false));
   }, [router]);
+
+  const sortedCourses = useMemo(
+    () => [...courses].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [courses],
+  );
+
+  const stats = [
+    { label: 'Cursos cadastrados', value: String(courses.length), icon: BookOpen, color: 'hsl(262,80%,50%)' },
+    { label: 'Perfil atual', value: user?.role ?? '—', icon: Shield, color: 'hsl(168,70%,45%)' },
+  ];
 
   return (
     <AppLayout>
@@ -109,17 +110,11 @@ export default function AdminDashboardPage() {
               Visao geral da plataforma Impacta Academy
             </p>
           </div>
-          <Button
-            className="gap-2 font-semibold"
-            style={{
-              background: 'linear-gradient(135deg, hsl(262,80%,50%), hsl(280,90%,60%))',
-            }}
-          >
-            <UserPlus className="h-4 w-4" /> Adicionar Usuario
-          </Button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
@@ -137,17 +132,6 @@ export default function AdminDashboardPage() {
                     >
                       <stat.icon className="h-5 w-5" style={{ color: stat.color }} />
                     </div>
-                    <Badge
-                      variant="secondary"
-                      className={`gap-1 text-xs ${stat.up ? 'text-accent' : 'text-destructive'}`}
-                    >
-                      {stat.up ? (
-                        <ArrowUpRight className="h-3 w-3" />
-                      ) : (
-                        <ArrowDownRight className="h-3 w-3" />
-                      )}
-                      {stat.change}
-                    </Badge>
                   </div>
                   <p
                     className="text-2xl font-bold text-foreground"
@@ -165,73 +149,43 @@ export default function AdminDashboardPage() {
         <Card className="border-none shadow-md">
           <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle className="text-lg" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-              Usuarios Recentes
+              Cursos recentes
             </CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Buscar usuarios..." className="h-9 pl-9" />
-            </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Papel</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Cadastro</TableHead>
-                  <TableHead className="w-10"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentUsers.map((user) => (
-                  <TableRow key={user.email}>
-                    <TableCell className="font-medium text-foreground">
-                      {user.name}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {user.email}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={user.role === 'Professor' ? 'default' : 'secondary'}
-                        className="text-xs"
-                      >
-                        {user.role === 'Professor' && <Shield className="mr-1 h-3 w-3" />}
-                        {user.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center gap-1.5 text-xs font-medium ${
-                          user.status === 'Ativo'
-                            ? 'text-accent'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            user.status === 'Ativo'
-                              ? 'bg-accent'
-                              : 'bg-muted-foreground'
-                          }`}
-                        />
-                        {user.status}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {user.joined}
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Carregando cursos...</p>
+            ) : sortedCourses.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum curso cadastrado.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Curso</TableHead>
+                    <TableHead>Descricao</TableHead>
+                    <TableHead>Cadastro</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {sortedCourses.slice(0, 6).map((course) => (
+                    <TableRow key={course.id}>
+                      <TableCell className="font-medium text-foreground">
+                        {course.title}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {course.description ?? 'Sem descricao cadastrada.'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <span className="inline-flex items-center gap-1 text-xs">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {formatDate(course.createdAt)}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>

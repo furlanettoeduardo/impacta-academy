@@ -29,4 +29,30 @@ model Course {
   createdBy   String   @db.Uuid
   createdAt   DateTime @default(now())
   creator     User     @relation(fields: [createdBy], references: [id])
+  modules     Module[]
+}
+
+model Module {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String
+  order     Int
+  courseId  String   @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course    Course   @relation(fields: [courseId], references: [id])
+  lessons   Lesson[]
+}
+
+model Lesson {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  order       Int
+  videoUrl    String?
+  moduleId    String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  module      Module   @relation(fields: [moduleId], references: [id])
 }

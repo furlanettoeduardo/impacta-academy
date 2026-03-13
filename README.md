@@ -117,6 +117,25 @@ Endpoints (JWT):
 - PATCH /courses/:id (ADMIN, PROFESSOR)
 - DELETE /courses/:id (ADMIN)
 
+## Modulos (API)
+
+Endpoints:
+
+- POST /modules (ADMIN, PROFESSOR)
+- GET /courses/:courseId/modules
+- PATCH /modules/:id (ADMIN, PROFESSOR)
+- DELETE /modules/:id (ADMIN, PROFESSOR)
+
+## Aulas (API)
+
+Endpoints:
+
+- POST /lessons (ADMIN, PROFESSOR)
+- GET /modules/:moduleId/lessons
+- GET /lessons/:id
+- PATCH /lessons/:id (ADMIN, PROFESSOR)
+- DELETE /lessons/:id (ADMIN, PROFESSOR)
+
 ## Rotas do frontend
 
 - /login

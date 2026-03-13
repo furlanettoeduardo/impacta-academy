@@ -2,14 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Clock, Search, Star, Users } from 'lucide-react';
+import { BookOpen, Calendar, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
 import { apiRequest } from '@/lib/api';
 import { clearToken, getToken } from '@/lib/auth';
 
@@ -20,14 +17,11 @@ type Course = {
   createdAt: string;
 };
 
-const categories = ['Todos', 'Desenvolvimento', 'Design', 'Marketing', 'Data Science', 'Negócios'];
-
 export default function CoursesPage() {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState('Todos');
 
   useEffect(() => {
     const token = getToken();
@@ -44,26 +38,17 @@ export default function CoursesPage() {
       });
   }, [router]);
 
-  const mappedCourses = useMemo(
-    () =>
-      courses.map((course, index) => ({
-        ...course,
-        category: 'Desenvolvimento',
-        hours: 20 + index * 2,
-        students: 1200 + index * 150,
-        rating: 4.6 + (index % 3) * 0.1,
-        progress: 0,
-        level: 'Intermediário',
-        color: 'hsl(262,80%,50%)',
-      })),
-    [courses],
+  const filtered = useMemo(
+    () => courses.filter((course) => course.title.toLowerCase().includes(search.toLowerCase())),
+    [courses, search],
   );
 
-  const filtered = mappedCourses.filter(
-    (course) =>
-      (activeCategory === 'Todos' || course.category === activeCategory) &&
-      course.title.toLowerCase().includes(search.toLowerCase()),
-  );
+  const formatDate = (value: string) =>
+    new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(value));
 
   return (
     <AppLayout>
@@ -96,25 +81,6 @@ export default function CoursesPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {categories.map((category) => (
-            <Button
-              key={category}
-              variant={activeCategory === category ? 'default' : 'outline'}
-              size="sm"
-              className={activeCategory === category ? 'font-semibold' : ''}
-              style={
-                activeCategory === category
-                  ? { background: 'linear-gradient(135deg, hsl(262,80%,50%), hsl(280,90%,60%))' }
-                  : {}
-              }
-              onClick={() => setActiveCategory(category)}
-            >
-              {category}
-            </Button>
-          ))}
-        </div>
-
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((course, i) => (
             <motion.div
@@ -127,50 +93,25 @@ export default function CoursesPage() {
                 <div
                   className="relative flex h-32 items-center justify-center"
                   style={{
-                    background: `linear-gradient(135deg, ${course.color}, ${course.color}cc)`,
+                    background: 'linear-gradient(135deg, hsl(262,80%,50%), hsl(280,90%,60%))',
                   }}
                 >
                   <BookOpen className="h-12 w-12 text-primary-foreground/40" />
-                  <Badge className="absolute right-3 top-3 border-none bg-white/20 text-xs text-primary-foreground backdrop-blur-sm">
-                    {course.level}
-                  </Badge>
                 </div>
                 <CardContent className="space-y-3 p-4">
                   <div>
                     <h3 className="line-clamp-1 font-semibold text-foreground transition-colors group-hover:text-primary">
                       {course.title}
                     </h3>
-                    <p className="mt-1 text-xs text-muted-foreground">{course.category}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {course.description ?? 'Sem descricao cadastrada.'}
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {course.hours}h
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {course.students.toLocaleString()}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Star className="h-3 w-3 text-yellow-500" />
-                      {course.rating.toFixed(1)}
-                    </span>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>Criado em {formatDate(course.createdAt)}</span>
                   </div>
-
-                  {course.progress > 0 ? (
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">Progresso</span>
-                        <span className="font-medium text-foreground">{course.progress}%</span>
-                      </div>
-                      <Progress value={course.progress} className="h-1.5" />
-                    </div>
-                  ) : (
-                    <Button size="sm" variant="outline" className="h-8 w-full text-xs">
-                      Começar curso
-                    </Button>
-                  )}
                 </CardContent>
               </Card>
             </motion.div>
