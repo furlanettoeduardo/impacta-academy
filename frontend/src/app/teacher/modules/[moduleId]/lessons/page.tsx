@@ -29,6 +29,7 @@ type Lesson = {
   id: string;
   title: string;
   description?: string | null;
+  videoUrl?: string | null;
   order: number;
   moduleId: string;
   createdAt: string;
@@ -47,12 +48,14 @@ export default function ModuleLessonsPage() {
 
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [newVideoUrl, setNewVideoUrl] = useState('');
   const [newOrder, setNewOrder] = useState(1);
   const [saving, setSaving] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editVideoUrl, setEditVideoUrl] = useState('');
   const [editOrder, setEditOrder] = useState(1);
 
   useEffect(() => {
@@ -118,6 +121,7 @@ export default function ModuleLessonsPage() {
         body: JSON.stringify({
           title: trimmed,
           description: newDescription.trim() || undefined,
+          videoUrl: newVideoUrl.trim() || undefined,
           order: parsedOrder,
           moduleId,
         }),
@@ -125,6 +129,7 @@ export default function ModuleLessonsPage() {
       setLessons((prev) => [...prev, created]);
       setNewTitle('');
       setNewDescription('');
+      setNewVideoUrl('');
       setNewOrder(created.order + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar aula.');
@@ -137,6 +142,7 @@ export default function ModuleLessonsPage() {
     setEditingId(lesson.id);
     setEditTitle(lesson.title);
     setEditDescription(lesson.description ?? '');
+    setEditVideoUrl(lesson.videoUrl ?? '');
     setEditOrder(lesson.order);
   };
 
@@ -144,6 +150,7 @@ export default function ModuleLessonsPage() {
     setEditingId(null);
     setEditTitle('');
     setEditDescription('');
+    setEditVideoUrl('');
     setEditOrder(1);
   };
 
@@ -176,6 +183,7 @@ export default function ModuleLessonsPage() {
         body: JSON.stringify({
           title: trimmed,
           description: editDescription.trim() || undefined,
+          videoUrl: editVideoUrl.trim() || undefined,
           order: parsedOrder,
         }),
       });
@@ -224,18 +232,9 @@ export default function ModuleLessonsPage() {
             </h1>
             <p className="mt-1 text-muted-foreground">Gerencie as aulas deste modulo</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              onClick={() => router.push('/teacher/lessons/upload')}
-              disabled={loading}
-            >
-              Upload de video
-            </Button>
-            <Button className="gap-2" onClick={handleAdd} disabled={saving || loading}>
-              <Plus className="h-4 w-4" /> Add Lesson
-            </Button>
-          </div>
+          <Button className="gap-2" onClick={handleAdd} disabled={saving || loading}>
+            <Plus className="h-4 w-4" /> Add Lesson
+          </Button>
         </div>
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -262,6 +261,15 @@ export default function ModuleLessonsPage() {
                   className="min-h-[110px]"
                   value={newDescription}
                   onChange={(event) => setNewDescription(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">URL do video</label>
+                <Input
+                  className="h-11"
+                  placeholder="Cole a URL do upload"
+                  value={newVideoUrl}
+                  onChange={(event) => setNewVideoUrl(event.target.value)}
                 />
               </div>
               <div className="space-y-2 sm:max-w-[160px]">
@@ -315,6 +323,12 @@ export default function ModuleLessonsPage() {
                               onChange={(event) => setEditDescription(event.target.value)}
                             />
                             <Input
+                              className="h-9"
+                              placeholder="URL do video"
+                              value={editVideoUrl}
+                              onChange={(event) => setEditVideoUrl(event.target.value)}
+                            />
+                            <Input
                               className="h-9 sm:max-w-[160px]"
                               type="number"
                               min={1}
@@ -328,6 +342,13 @@ export default function ModuleLessonsPage() {
                             {lesson.description ? (
                               <p className="text-sm text-muted-foreground">{lesson.description}</p>
                             ) : null}
+                            {lesson.videoUrl ? (
+                              <p className="text-xs text-muted-foreground break-all">
+                                Video: {lesson.videoUrl}
+                              </p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">Video nao informado.</p>
+                            )}
                           </>
                         )}
                       </div>

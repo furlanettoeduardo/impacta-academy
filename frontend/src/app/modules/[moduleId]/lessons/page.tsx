@@ -110,9 +110,16 @@ export default function ModuleLessonsPage() {
                         ) : null}
                       </div>
                       {lesson.videoUrl ? (
-                        <p className="text-xs text-muted-foreground break-all">
-                          Video: {lesson.videoUrl}
-                        </p>
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground break-all">
+                            Video: {lesson.videoUrl}
+                          </p>
+                          <video
+                            className="w-full rounded-lg border border-border"
+                            controls
+                            src={lesson.videoUrl}
+                          />
+                        </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">Video nao informado.</p>
                       )}

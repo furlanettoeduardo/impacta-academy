@@ -167,7 +167,6 @@ Resposta:
 - /register
 - /dashboard (protegido por JWT no localStorage)
 - /courses (protegido por JWT no localStorage)
-- /teacher/lessons/upload (upload de video para professores)
 
 O token JWT deve ser enviado no header:
 
