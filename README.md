@@ -1,8 +1,8 @@
 # Plataforma de Cursos - Fullstack LMS
 
-## Descricao do projeto
+## Descrição do projeto
 
-Plataforma de cursos online com autenticacao, catalogo de cursos e um frontend
+Plataforma de cursos online com autenticação, catálogo de cursos e um frontend
 minimalista para consumo da API.
 
 ## Arquitetura do sistema
@@ -51,13 +51,13 @@ impacta-academy/
 
 ## Rodar o projeto com Docker
 
-Na raiz do repositorio `impacta-academy`, execute:
+Na raiz do repositório `impacta-academy`, execute:
 
 ```bash
 docker compose up --build
 ```
 
-Servicos disponiveis:
+Serviços disponíveis:
 
 - Backend: http://localhost:4000
 - Frontend: http://localhost:3000
@@ -65,12 +65,12 @@ Servicos disponiveis:
 - MinIO: http://localhost:9000
 - MinIO Console: http://localhost:9001
 
-## Variaveis de ambiente
+## Variáveis de ambiente
 
 Backend: arquivo `backend/.env`
 Frontend: arquivo `frontend/.env.local`
 
-Variaveis usadas no backend:
+Variáveis usadas no backend:
 
 - JWT_SECRET
 - JWT_EXPIRES_IN
@@ -78,7 +78,7 @@ Variaveis usadas no backend:
 
 ## Prisma
 
-O backend usa Prisma 7. A conexao do banco e definida por `DATABASE_URL` no
+O backend usa Prisma 7. A conexão do banco é definida por `DATABASE_URL` no
 arquivo `backend/.env` e pelo arquivo `backend/prisma.config.ts`.
 
 O Prisma Client usa o adapter PostgreSQL (`@prisma/adapter-pg`) com a mesma
@@ -92,12 +92,12 @@ npm run prisma:generate
 npm run prisma:migrate -- --name init
 ```
 
-Se houver mudancas no schema, crie uma nova migration com outro nome.
+Se houver mudanças no schema, crie uma nova migration com outro nome.
 
 O Prisma Client tambem e gerado automaticamente no `postinstall` e durante o
 build do Docker.
 
-## Autenticacao (JWT)
+## Autenticação (JWT)
 
 Endpoints:
 
@@ -128,7 +128,7 @@ O token JWT deve ser enviado no header:
 Authorization: Bearer <access_token>
 ```
 
-## Exemplo de requisicao
+## Exemplo de requisição
 
 Criar curso com token JWT:
 
