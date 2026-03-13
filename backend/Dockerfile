@@ -14,4 +14,6 @@ RUN npm run build
 ENV NODE_ENV=production
 EXPOSE 4000
 
-CMD ["npm", "run", "start:prod"]
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["sh", "/app/entrypoint.sh"]

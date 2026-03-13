@@ -57,6 +57,8 @@ Na raiz do repositório `impacta-academy`, execute:
 docker compose up --build
 ```
 
+Na subida do container do backend, o Prisma executa as migrations automaticamente.
+
 Serviços disponíveis:
 
 - Backend: http://localhost:4000
