@@ -53,6 +53,8 @@ npm run prisma:generate
 npm run prisma:migrate -- --name init
 ```
 
+Se houver mudancas no schema (ex.: cursos), rode uma nova migration com outro nome.
+
 O Prisma Client tambem e gerado automaticamente no `postinstall` e durante o
 build do Docker.
 
@@ -63,6 +65,25 @@ Endpoints:
 - POST /auth/register
 - POST /auth/login
 - GET /users/me (protegido)
+
+## Cursos
+
+Endpoints (JWT):
+
+- POST /courses (ADMIN, PROFESSOR)
+- GET /courses
+- GET /courses/:id
+- PATCH /courses/:id (ADMIN, PROFESSOR)
+- DELETE /courses/:id (ADMIN)
+
+## Frontend
+
+Rotas basicas:
+
+- /login
+- /register
+- /dashboard (protegido por JWT no localStorage)
+- /courses (protegido por JWT no localStorage)
 
 O token JWT deve ser enviado no header:
 
