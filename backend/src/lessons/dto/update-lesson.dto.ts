@@ -10,6 +10,10 @@ export class UpdateLessonDto {
   description?: string;
 
   @IsOptional()
+  @IsString()
+  videoUrl?: string;
+
+  @IsOptional()
   @IsInt()
   @Min(1)
   order?: number;

@@ -8,6 +8,10 @@ export class CreateLessonDto {
   @IsString()
   description?: string;
 
+  @IsOptional()
+  @IsString()
+  videoUrl?: string;
+
   @IsInt()
   @Min(1)
   order: number;

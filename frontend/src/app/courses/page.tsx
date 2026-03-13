@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { BookOpen, Calendar, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { apiRequest } from '@/lib/api';
@@ -112,6 +113,14 @@ export default function CoursesPage() {
                     <Calendar className="h-3.5 w-3.5" />
                     <span>Criado em {formatDate(course.createdAt)}</span>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 w-full text-xs"
+                    onClick={() => router.push(`/courses/${course.id}/modules`)}
+                  >
+                    Ver modulos
+                  </Button>
                 </CardContent>
               </Card>
             </motion.div>

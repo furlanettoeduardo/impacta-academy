@@ -77,6 +77,11 @@ Variáveis usadas no backend:
 - JWT_SECRET
 - JWT_EXPIRES_IN
 - DATABASE_URL
+- MINIO_ENDPOINT
+- MINIO_PORT
+- MINIO_ACCESS_KEY
+- MINIO_SECRET_KEY
+- MINIO_BUCKET
 
 ## Prisma
 
@@ -136,12 +141,33 @@ Endpoints:
 - PATCH /lessons/:id (ADMIN, PROFESSOR)
 - DELETE /lessons/:id (ADMIN, PROFESSOR)
 
+## Upload de videos (API)
+
+Endpoint:
+
+- POST /upload/video (ADMIN, PROFESSOR)
+
+Request: multipart/form-data
+
+Campo:
+
+- file
+
+Resposta:
+
+```
+{
+	"url": "http://localhost:9000/videos/lesson-<timestamp>.mp4"
+}
+```
+
 ## Rotas do frontend
 
 - /login
 - /register
 - /dashboard (protegido por JWT no localStorage)
 - /courses (protegido por JWT no localStorage)
+- /teacher/lessons/upload (upload de video para professores)
 
 O token JWT deve ser enviado no header:
 

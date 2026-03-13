@@ -224,9 +224,18 @@ export default function ModuleLessonsPage() {
             </h1>
             <p className="mt-1 text-muted-foreground">Gerencie as aulas deste modulo</p>
           </div>
-          <Button className="gap-2" onClick={handleAdd} disabled={saving || loading}>
-            <Plus className="h-4 w-4" /> Add Lesson
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => router.push('/teacher/lessons/upload')}
+              disabled={loading}
+            >
+              Upload de video
+            </Button>
+            <Button className="gap-2" onClick={handleAdd} disabled={saving || loading}>
+              <Plus className="h-4 w-4" /> Add Lesson
+            </Button>
+          </div>
         </div>
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}

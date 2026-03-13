@@ -29,6 +29,7 @@ export class LessonsService {
       data: {
         title: dto.title,
         description: dto.description,
+        videoUrl: dto.videoUrl,
         order: dto.order,
         moduleId: dto.moduleId,
       },
@@ -54,6 +55,7 @@ export class LessonsService {
       data: {
         title: dto.title,
         description: dto.description,
+        videoUrl: dto.videoUrl,
         order: dto.order,
       },
     });
