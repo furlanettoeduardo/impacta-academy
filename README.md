@@ -1,17 +1,55 @@
-# Plataforma de Cursos - Fullstack
+# Plataforma de Cursos - Fullstack LMS
 
-Estrutura:
+## Descricao do projeto
 
-- backend/ (NestJS + TypeScript)
-- frontend/ (Next.js + TypeScript + TailwindCSS)
-- docker-compose.yml
+Plataforma de cursos online com autenticacao, catalogo de cursos e um frontend
+minimalista para consumo da API.
+
+## Arquitetura do sistema
+
+- Frontend: Next.js
+- Backend: NestJS (API)
+- Banco de dados: PostgreSQL
+- Storage de arquivos: MinIO
+
+## Tecnologias utilizadas
+
+**Backend**
+
+- NestJS
+- TypeScript
+- Prisma ORM
+- JWT, Passport, bcrypt
+- class-validator
+
+**Frontend**
+
+- Next.js
+- TypeScript
+- TailwindCSS
+
+**Infraestrutura**
+
+- PostgreSQL
+- MinIO
+- Docker + Docker Compose
+
+## Estrutura do projeto
+
+```
+impacta-academy/
+├── backend
+├── frontend
+├── docker-compose.yml
+└── README.md
+```
 
 ## Requisitos
 
 - Docker
 - Docker Compose
 
-## Subir o ambiente com Docker
+## Rodar o projeto com Docker
 
 Na raiz do repositorio `impacta-academy`, execute:
 
@@ -32,10 +70,11 @@ Servicos disponiveis:
 Backend: arquivo `backend/.env`
 Frontend: arquivo `frontend/.env.local`
 
-Backend (auth):
+Variaveis usadas no backend:
 
 - JWT_SECRET
 - JWT_EXPIRES_IN
+- DATABASE_URL
 
 ## Prisma
 
@@ -53,7 +92,7 @@ npm run prisma:generate
 npm run prisma:migrate -- --name init
 ```
 
-Se houver mudancas no schema (ex.: cursos), rode uma nova migration com outro nome.
+Se houver mudancas no schema, crie uma nova migration com outro nome.
 
 O Prisma Client tambem e gerado automaticamente no `postinstall` e durante o
 build do Docker.
@@ -66,7 +105,7 @@ Endpoints:
 - POST /auth/login
 - GET /users/me (protegido)
 
-## Cursos
+## Cursos (API)
 
 Endpoints (JWT):
 
@@ -76,9 +115,7 @@ Endpoints (JWT):
 - PATCH /courses/:id (ADMIN, PROFESSOR)
 - DELETE /courses/:id (ADMIN)
 
-## Frontend
-
-Rotas basicas:
+## Rotas do frontend
 
 - /login
 - /register
@@ -89,4 +126,34 @@ O token JWT deve ser enviado no header:
 
 ```
 Authorization: Bearer <access_token>
+```
+
+## Exemplo de requisicao
+
+Criar curso com token JWT:
+
+```bash
+curl -X POST http://localhost:4000/courses \
+	-H "Content-Type: application/json" \
+	-H "Authorization: Bearer <access_token>" \
+	-d '{"title": "Introducao ao NestJS", "description": "Fundamentos da API"}'
+```
+
+## Desenvolvimento sem Docker
+
+Backend:
+
+```bash
+cd backend
+npm install
+npm run prisma:generate
+npm run start:dev
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
 ```
