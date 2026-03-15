@@ -159,7 +159,10 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {sortedCourses.slice(0, 4).map((course, i) => (
                 <motion.div key={course.id} custom={i + 4} variants={fadeUp} initial="hidden" animate="visible">
-                  <Card className="border-none shadow-md">
+                  <Card
+                    className="cursor-pointer border-none shadow-md transition-shadow hover:shadow-lg"
+                    onClick={() => router.push(`/courses/${course.id}/modules`)}
+                  >
                     <CardContent className="space-y-2 p-5">
                       <h3 className="font-semibold text-foreground">{course.title}</h3>
                       <p className="text-sm text-muted-foreground">

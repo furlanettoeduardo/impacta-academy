@@ -18,6 +18,7 @@ model User {
   email     String   @unique
   password  String
   role      UserRole
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   courses   Course[]
 }

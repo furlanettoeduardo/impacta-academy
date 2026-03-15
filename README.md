@@ -67,6 +67,13 @@ Serviços disponíveis:
 - MinIO: http://localhost:9000
 - MinIO Console: http://localhost:9001
 
+## Usuario admin padrao
+
+Na primeira execucao do projeto, um usuario administrador padrao e criado:
+
+- Email: admin@academy.com
+- Senha: Master123
+
 ## Variáveis de ambiente
 
 Backend: arquivo `backend/.env`

@@ -5,9 +5,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Apple,
   ArrowRight,
-  Chrome,
   GraduationCap,
   Lock,
   Mail,
@@ -15,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { apiRequest } from '@/lib/api';
 import { setToken } from '@/lib/auth';
 
@@ -140,23 +137,6 @@ export default function LoginPage() {
           <p className="mb-8 text-muted-foreground">
             Entre para continuar aprendendo
           </p>
-
-          <div className="mb-6 grid grid-cols-2 gap-3">
-            <Button variant="outline" className="h-12 gap-2 text-sm font-medium">
-              <Chrome className="h-5 w-5" /> Google
-            </Button>
-            <Button variant="outline" className="h-12 gap-2 text-sm font-medium">
-              <Apple className="h-5 w-5" /> Apple
-            </Button>
-          </div>
-
-          <div className="mb-6 flex items-center gap-3">
-            <Separator className="flex-1" />
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">
-              ou
-            </span>
-            <Separator className="flex-1" />
-          </div>
 
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">

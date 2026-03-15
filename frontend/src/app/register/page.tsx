@@ -16,18 +16,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiRequest } from '@/lib/api';
 
-const roles = [
-  { label: 'Administrador', value: 'ADMIN' },
-  { label: 'Professor', value: 'PROFESSOR' },
-  { label: 'Aluno', value: 'ALUNO' },
-];
-
 export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('ALUNO');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -39,7 +32,7 @@ export default function RegisterPage() {
     try {
       await apiRequest('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ name, email, password }),
       });
       router.push('/login');
     } catch (err) {
@@ -168,21 +161,6 @@ export default function RegisterPage() {
                   required
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Perfil</Label>
-              <select
-                id="role"
-                className="h-12 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={role}
-                onChange={(event) => setRole(event.target.value)}
-              >
-                {roles.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
             </div>
 
             {error ? <p className="text-sm text-red-600">{error}</p> : null}

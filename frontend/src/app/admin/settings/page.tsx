@@ -47,6 +47,7 @@ export default function AdminSettingsPage() {
       .finally(() => setLoading(false));
   }, [router]);
 
+
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -89,7 +90,7 @@ export default function AdminSettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {loading ? (
-                  <p className="text-sm text-muted-foreground">Carregando configuracoes...</p>
+                  <p className="text-sm text-muted-foreground">Carregando configurações...</p>
                 ) : (
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div className="space-y-2">
@@ -137,7 +138,7 @@ export default function AdminSettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <p className="text-sm text-muted-foreground">
-                  Nenhuma configuracao real disponivel nesta versao.
+                  Nenhuma configuração real disponível nesta versão.
                 </p>
                 <Separator />
                 <div className="flex justify-end">
@@ -159,7 +160,7 @@ export default function AdminSettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <p className="text-sm text-muted-foreground">
-                  Nenhuma configuracao real disponivel nesta versao.
+                  Nenhuma configuração real disponível nesta versão.
                 </p>
                 <Separator />
                 <div className="space-y-2">
@@ -188,7 +189,7 @@ export default function AdminSettingsPage() {
                   <Label>Logo da Plataforma</Label>
                   <div className="cursor-pointer rounded-xl border-2 border-dashed border-border p-8 text-center transition-colors hover:border-primary/50">
                     <p className="text-sm text-muted-foreground">Arraste ou clique para enviar o logo</p>
-                    <p className="mt-1 text-xs text-muted-foreground">PNG, SVG ate 2MB</p>
+                    <p className="mt-1 text-xs text-muted-foreground">PNG, SVG até 2MB</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

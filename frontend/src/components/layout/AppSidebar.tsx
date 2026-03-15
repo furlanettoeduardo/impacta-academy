@@ -7,6 +7,7 @@ import {
   LogOut,
   Settings,
   Shield,
+  Users,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -44,6 +45,7 @@ const teacherItems = [
 
 const adminItems = [
   { title: 'Painel Admin', url: '/admin/dashboard', icon: Shield },
+  { title: 'Usuários', url: '/admin/users', icon: Users },
   { title: 'Configurações', url: '/admin/settings', icon: Settings },
 ];
 
@@ -68,7 +70,7 @@ export function AppSidebar() {
       });
   }, []);
 
-  const canSeeStudent = role === null || role === 'ALUNO' || role === 'PROFESSOR' || role === 'ADMIN';
+  const canSeeStudent = role === null || role === 'ALUNO';
   const canSeeTeacher = role === 'PROFESSOR' || role === 'ADMIN';
   const canSeeAdmin = role === 'ADMIN';
 
