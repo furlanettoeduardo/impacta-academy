@@ -1,8 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, OnModuleInit } from '@nestjs/common';
 import { Client } from 'minio';
 
 @Injectable()
-export class UploadService {
+export class UploadService implements OnModuleInit {
   private readonly client: Client;
   private readonly bucket: string;
   private readonly publicUrl: string;
@@ -31,12 +31,31 @@ export class UploadService {
       if (!exists) {
         await this.client.makeBucket(this.bucket, 'us-east-1');
       }
+
+      await this.client.setBucketPolicy(
+        this.bucket,
+        JSON.stringify({
+          Version: '2012-10-17',
+          Statement: [
+            {
+              Effect: 'Allow',
+              Principal: { AWS: ['*'] },
+              Action: ['s3:GetObject'],
+              Resource: [`arn:aws:s3:::${this.bucket}/*`],
+            },
+          ],
+        }),
+      );
     } catch (error) {
       throw new InternalServerErrorException('Unable to initialize storage');
     }
   }
 
-  async uploadVideo(file: Express.Multer.File) {
+  async onModuleInit() {
+    await this.ensureBucket();
+  }
+
+  async uploadVideo(file: { buffer: Buffer; size: number; mimetype: string }) {
     await this.ensureBucket();
 
     const unique = Math.random().toString(36).slice(2, 8);

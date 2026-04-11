@@ -8,6 +8,7 @@ COPY prisma.config.ts ./
 RUN npm install --legacy-peer-deps
 
 COPY . .
+RUN rm -f tsconfig.build.tsbuildinfo
 RUN npm run prisma:generate
 RUN npm run build
 

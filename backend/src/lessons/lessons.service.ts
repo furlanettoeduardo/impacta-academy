@@ -36,11 +36,26 @@ export class LessonsService {
     });
   }
 
-  async findByModule(moduleId: string) {
+  async findByModule(moduleId: string, userId: string) {
     await this.ensureModule(moduleId);
-    return this.prisma.lesson.findMany({
+    const lessons = await this.prisma.lesson.findMany({
       where: { moduleId },
       orderBy: { order: 'asc' },
+      include: {
+        progresses: {
+          where: { userId },
+          select: { watched: true },
+        },
+      },
+    });
+
+    return lessons.map((lesson) => {
+      const watched = lesson.progresses[0]?.watched ?? false;
+      const { progresses, ...rest } = lesson;
+      return {
+        ...rest,
+        watched,
+      };
     });
   }
 
@@ -64,5 +79,33 @@ export class LessonsService {
   async remove(id: string) {
     await this.ensureLesson(id);
     return this.prisma.lesson.delete({ where: { id } });
+  }
+
+  async markAsWatched(id: string, userId: string) {
+    await this.ensureLesson(id);
+
+    return this.prisma.lessonProgress.upsert({
+      where: {
+        userId_lessonId: {
+          userId,
+          lessonId: id,
+        },
+      },
+      create: {
+        userId,
+        lessonId: id,
+        watched: true,
+        watchedAt: new Date(),
+      },
+      update: {
+        watched: true,
+        watchedAt: new Date(),
+      },
+      select: {
+        lessonId: true,
+        watched: true,
+        watchedAt: true,
+      },
+    });
   }
 }

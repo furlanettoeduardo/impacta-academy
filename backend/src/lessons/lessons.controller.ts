@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { UserRole } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -6,6 +7,8 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { LessonsService } from './lessons.service';
+
+type AuthRequest = Request & { user: { userId: string; role: UserRole } };
 
 @Controller()
 export class LessonsController {
@@ -20,8 +23,8 @@ export class LessonsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('modules/:moduleId/lessons')
-  findByModule(@Param('moduleId') moduleId: string) {
-    return this.lessonsService.findByModule(moduleId);
+  findByModule(@Param('moduleId') moduleId: string, @Req() req: AuthRequest) {
+    return this.lessonsService.findByModule(moduleId, req.user.userId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -42,5 +45,11 @@ export class LessonsController {
   @Delete('lessons/:id')
   remove(@Param('id') id: string) {
     return this.lessonsService.remove(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('lessons/:id/watch')
+  markAsWatched(@Param('id') id: string, @Req() req: AuthRequest) {
+    return this.lessonsService.markAsWatched(id, req.user.userId);
   }
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Eye, Plus, Save, Upload } from 'lucide-react';
+import { BookOpen, Eye, FolderTree, Plus, Save, Upload, Video } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -50,10 +50,7 @@ export default function TeacherCourseManagePage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [selectedLessonId, setSelectedLessonId] = useState('');
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
-  const [level, setLevel] = useState('');
-  const [price, setPrice] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadUrl, setUploadUrl] = useState('');
   const [error, setError] = useState('');
@@ -173,10 +170,7 @@ export default function TeacherCourseManagePage() {
       setCourses((prev) => [created, ...prev]);
       setSelectedCourseId(created.id);
       setTitle('');
-      setCategory('');
       setDescription('');
-      setLevel('');
-      setPrice('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar curso.');
     } finally {
@@ -253,7 +247,7 @@ export default function TeacherCourseManagePage() {
               Gerenciar Curso
             </motion.h1>
             <p className="mt-1 text-muted-foreground">
-              Crie ou edite um curso e faca upload das aulas
+              Crie cursos e organize modulos e aulas sem trocar de contexto
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -275,10 +269,10 @@ export default function TeacherCourseManagePage() {
 
         <Card className="border-none shadow-md">
           <CardHeader>
-            <CardTitle style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Informacoes do Curso</CardTitle>
+            <CardTitle style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Cadastro de curso</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6">
               <div className="space-y-2">
                 <Label>Titulo do Curso</Label>
                 <Input
@@ -289,15 +283,6 @@ export default function TeacherCourseManagePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Input
-                  placeholder="Ex: Desenvolvimento"
-                  className="h-11"
-                  value={category}
-                  onChange={(event) => setCategory(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
                 <Label>Descricao</Label>
                 <Textarea
                   placeholder="Descreva o conteudo do curso..."
@@ -306,58 +291,16 @@ export default function TeacherCourseManagePage() {
                   onChange={(event) => setDescription(event.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Nivel</Label>
-                <Input
-                  placeholder="Iniciante, Intermediario ou Avancado"
-                  className="h-11"
-                  value={level}
-                  onChange={(event) => setLevel(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Preco (R$)</Label>
-                <Input
-                  type="number"
-                  placeholder="0 para gratuito"
-                  className="h-11"
-                  value={price}
-                  onChange={(event) => setPrice(event.target.value)}
-                />
-              </div>
             </div>
-
-            <div className="space-y-2">
-              <Label>Thumbnail do Curso</Label>
-              <div className="cursor-pointer rounded-xl border-2 border-dashed border-border p-8 text-center transition-colors hover:border-primary/50">
-                <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  Arraste ou clique para enviar a imagem de capa
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  PNG, JPG ate 5MB - Recomendado: 1280x720
-                </p>
-              </div>
-            </div>
+            <Button className="gap-2" onClick={handleCreate} disabled={saving}>
+              <Plus className="h-4 w-4" /> Criar curso
+            </Button>
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-md">
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Aulas do Curso</CardTitle>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-2"
-              onClick={() => {
-                if (selectedCourseId) {
-                  router.push(`/teacher/courses/${selectedCourseId}/modules`);
-                }
-              }}
-              disabled={!selectedCourseId || loading}
-            >
-              <Plus className="h-4 w-4" /> Adicionar Aula
-            </Button>
+            <CardTitle style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Estrutura do curso</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -421,13 +364,33 @@ export default function TeacherCourseManagePage() {
               </div>
             </div>
 
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={() => selectedCourseId && router.push(`/teacher/courses/${selectedCourseId}/modules`)}
+                disabled={!selectedCourseId || loading}
+              >
+                <FolderTree className="h-4 w-4" /> Gerenciar modulos
+              </Button>
+              <Button
+                type="button"
+                className="gap-2"
+                onClick={() => selectedModuleId && router.push(`/teacher/modules/${selectedModuleId}/lessons`)}
+                disabled={!selectedModuleId || loading}
+              >
+                <Video className="h-4 w-4" /> Gerenciar aulas do modulo
+              </Button>
+            </div>
+
             <div className="rounded-xl border-2 border-dashed border-border p-6 text-center transition-colors hover:border-primary/50">
               <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
               <p className="text-sm font-medium text-foreground">
-                Arraste arquivos de video ou documentos aqui
+                Vincular video a aula selecionada
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                MP4, MOV, PDF, DOCX - ate 500MB por arquivo
+                Selecione uma aula na lista acima e envie o arquivo de video
               </p>
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
                 <Input

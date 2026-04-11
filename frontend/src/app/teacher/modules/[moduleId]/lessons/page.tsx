@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { PencilLine, Plus, Save, Trash2, X } from 'lucide-react';
+import { Link2, PencilLine, Plus, Save, Trash2, Upload, X } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,8 @@ type Lesson = {
   updatedAt: string;
 };
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
 export default function ModuleLessonsPage() {
   const router = useRouter();
   const params = useParams<{ moduleId: string }>();
@@ -48,15 +50,45 @@ export default function ModuleLessonsPage() {
 
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
-  const [newVideoUrl, setNewVideoUrl] = useState('');
   const [newOrder, setNewOrder] = useState(1);
   const [saving, setSaving] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editVideoUrl, setEditVideoUrl] = useState('');
   const [editOrder, setEditOrder] = useState(1);
+
+  const [videoLinkByLessonId, setVideoLinkByLessonId] = useState<Record<string, string>>({});
+  const [uploadFileByLessonId, setUploadFileByLessonId] = useState<Record<string, File | null>>({});
+  const [uploadingLessonId, setUploadingLessonId] = useState<string | null>(null);
+
+  const validatePlayableVideoUrl = async (url: string) => {
+    return new Promise<void>((resolve, reject) => {
+      const video = document.createElement('video');
+      const timeout = window.setTimeout(() => {
+        cleanup();
+        reject(new Error('URL invalida ou sem suporte de reproducao no navegador.'));
+      }, 9000);
+
+      const cleanup = () => {
+        window.clearTimeout(timeout);
+        video.removeAttribute('src');
+        video.load();
+      };
+
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        cleanup();
+        resolve();
+      };
+      video.onerror = () => {
+        cleanup();
+        reject(new Error('URL invalida ou sem suporte de reproducao no navegador.'));
+      };
+
+      video.src = url;
+    });
+  };
 
   useEffect(() => {
     const token = getToken();
@@ -121,7 +153,6 @@ export default function ModuleLessonsPage() {
         body: JSON.stringify({
           title: trimmed,
           description: newDescription.trim() || undefined,
-          videoUrl: newVideoUrl.trim() || undefined,
           order: parsedOrder,
           moduleId,
         }),
@@ -129,7 +160,6 @@ export default function ModuleLessonsPage() {
       setLessons((prev) => [...prev, created]);
       setNewTitle('');
       setNewDescription('');
-      setNewVideoUrl('');
       setNewOrder(created.order + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar aula.');
@@ -142,7 +172,6 @@ export default function ModuleLessonsPage() {
     setEditingId(lesson.id);
     setEditTitle(lesson.title);
     setEditDescription(lesson.description ?? '');
-    setEditVideoUrl(lesson.videoUrl ?? '');
     setEditOrder(lesson.order);
   };
 
@@ -150,7 +179,6 @@ export default function ModuleLessonsPage() {
     setEditingId(null);
     setEditTitle('');
     setEditDescription('');
-    setEditVideoUrl('');
     setEditOrder(1);
   };
 
@@ -183,7 +211,6 @@ export default function ModuleLessonsPage() {
         body: JSON.stringify({
           title: trimmed,
           description: editDescription.trim() || undefined,
-          videoUrl: editVideoUrl.trim() || undefined,
           order: parsedOrder,
         }),
       });
@@ -216,6 +243,90 @@ export default function ModuleLessonsPage() {
       setError(err instanceof Error ? err.message : 'Erro ao remover aula.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const updateLessonVideoUrl = async (lessonId: string, videoUrl: string) => {
+    const token = getToken();
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+
+    const trimmed = videoUrl.trim();
+    if (!trimmed) {
+      setError('Informe uma URL de video valida.');
+      return;
+    }
+
+    if (!/^https?:\/\//i.test(trimmed)) {
+      setError('A URL precisa iniciar com http:// ou https://');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      await validatePlayableVideoUrl(trimmed);
+
+      const updated = await apiRequest<Lesson>(`/lessons/${lessonId}`, {
+        method: 'PATCH',
+        token,
+        body: JSON.stringify({ videoUrl: trimmed }),
+      });
+      setLessons((prev) => prev.map((item) => (item.id === lessonId ? updated : item)));
+      setVideoLinkByLessonId((prev) => ({ ...prev, [lessonId]: updated.videoUrl ?? '' }));
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Erro ao vincular URL do video. Use um link direto de arquivo de video.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUploadVideo = async (lessonId: string) => {
+    const token = getToken();
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+
+    const file = uploadFileByLessonId[lessonId];
+    if (!file) {
+      setError('Selecione um arquivo de video para upload.');
+      return;
+    }
+
+    setUploadingLessonId(lessonId);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const uploadResponse = await fetch(`${API_URL}/upload/video`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const uploadBody = await uploadResponse.json();
+      if (!uploadResponse.ok) {
+        const message = uploadBody?.message ?? 'Erro ao enviar video.';
+        throw new Error(Array.isArray(message) ? message.join(', ') : message);
+      }
+
+      const uploadedUrl = uploadBody.url as string;
+      await updateLessonVideoUrl(lessonId, uploadedUrl);
+      setUploadFileByLessonId((prev) => ({ ...prev, [lessonId]: null }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao enviar video.');
+    } finally {
+      setUploadingLessonId(null);
     }
   };
 
@@ -262,15 +373,14 @@ export default function ModuleLessonsPage() {
                   value={newDescription}
                   onChange={(event) => setNewDescription(event.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Este texto sera exibido abaixo do player para os alunos.
+                </p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">URL do video</label>
-                <Input
-                  className="h-11"
-                  placeholder="Cole a URL do upload"
-                  value={newVideoUrl}
-                  onChange={(event) => setNewVideoUrl(event.target.value)}
-                />
+                <p className="text-xs text-muted-foreground">
+                  O video pode ser vinculado depois, por upload ou URL, em cada aula criada.
+                </p>
               </div>
               <div className="space-y-2 sm:max-w-[160px]">
                 <label className="text-sm font-medium text-foreground">Ordem</label>
@@ -322,12 +432,9 @@ export default function ModuleLessonsPage() {
                               value={editDescription}
                               onChange={(event) => setEditDescription(event.target.value)}
                             />
-                            <Input
-                              className="h-9"
-                              placeholder="URL do video"
-                              value={editVideoUrl}
-                              onChange={(event) => setEditVideoUrl(event.target.value)}
-                            />
+                            <p className="text-xs text-muted-foreground">
+                              Este texto sera exibido abaixo do player para os alunos.
+                            </p>
                             <Input
                               className="h-9 sm:max-w-[160px]"
                               type="number"
@@ -349,6 +456,63 @@ export default function ModuleLessonsPage() {
                             ) : (
                               <p className="text-xs text-muted-foreground">Video nao informado.</p>
                             )}
+
+                            <div className="mt-2 space-y-2 rounded-md border border-border bg-secondary/30 p-3">
+                              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Midia da aula
+                              </p>
+                              <div className="flex flex-col gap-2 sm:flex-row">
+                                <Input
+                                  className="h-9"
+                                  placeholder="https://..."
+                                  value={videoLinkByLessonId[lesson.id] ?? lesson.videoUrl ?? ''}
+                                  onChange={(event) =>
+                                    setVideoLinkByLessonId((prev) => ({
+                                      ...prev,
+                                      [lesson.id]: event.target.value,
+                                    }))
+                                  }
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="gap-2"
+                                  onClick={() =>
+                                    updateLessonVideoUrl(
+                                      lesson.id,
+                                      videoLinkByLessonId[lesson.id] ?? lesson.videoUrl ?? '',
+                                    )
+                                  }
+                                  disabled={saving || uploadingLessonId === lesson.id}
+                                >
+                                  <Link2 className="h-4 w-4" /> Salvar link
+                                </Button>
+                              </div>
+
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <Input
+                                  type="file"
+                                  accept="video/*"
+                                  className="h-9"
+                                  onChange={(event) =>
+                                    setUploadFileByLessonId((prev) => ({
+                                      ...prev,
+                                      [lesson.id]: event.target.files?.[0] ?? null,
+                                    }))
+                                  }
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="gap-2"
+                                  onClick={() => handleUploadVideo(lesson.id)}
+                                  disabled={saving || uploadingLessonId === lesson.id}
+                                >
+                                  <Upload className="h-4 w-4" />
+                                  {uploadingLessonId === lesson.id ? 'Enviando...' : 'Upload video'}
+                                </Button>
+                              </div>
+                            </div>
                           </>
                         )}
                       </div>
