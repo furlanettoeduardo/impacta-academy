@@ -4,6 +4,7 @@ node_modules/
 # Builds
 backend/dist/
 frontend/.next/
+*.tsbuildinfo
 
 # Logs
 npm-debug.log

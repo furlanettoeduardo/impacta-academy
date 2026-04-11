@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { PencilLine, Plus, Save, Trash2, X } from 'lucide-react';
+import { BookOpen, PencilLine, Plus, Save, Trash2, X } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -303,6 +303,14 @@ export default function CourseModulesPage() {
                           <>
                             <Button size="sm" variant="outline" className="gap-2" onClick={() => startEdit(module)}>
                               <PencilLine className="h-4 w-4" /> Editar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-2"
+                              onClick={() => router.push(`/teacher/modules/${module.id}/lessons`)}
+                            >
+                              <BookOpen className="h-4 w-4" /> Aulas
                             </Button>
                             <Button
                               size="sm"

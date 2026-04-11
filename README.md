@@ -57,7 +57,7 @@ Na raiz do repositório `impacta-academy`, execute:
 docker compose up --build
 ```
 
-Na subida do container do backend, o Prisma executa as migrations automaticamente.
+Na subida do container do backend, o Prisma aplica as migrations versionadas com `prisma migrate deploy`.
 
 Serviços disponíveis:
 
@@ -108,6 +108,13 @@ npm run prisma:migrate -- --name init
 
 Se houver mudanças no schema, crie uma nova migration com outro nome.
 
+Para aplicar migrations ja versionadas sem criar novas (fluxo usado no Docker):
+
+```bash
+cd backend
+npx prisma migrate deploy
+```
+
 O Prisma Client tambem e gerado automaticamente no `postinstall` e durante o
 build do Docker.
 
@@ -145,8 +152,23 @@ Endpoints:
 - POST /lessons (ADMIN, PROFESSOR)
 - GET /modules/:moduleId/lessons
 - GET /lessons/:id
+- POST /lessons/:id/watch
 - PATCH /lessons/:id (ADMIN, PROFESSOR)
 - DELETE /lessons/:id (ADMIN, PROFESSOR)
+
+`GET /modules/:moduleId/lessons` retorna tambem o campo `watched` para o usuario autenticado.
+
+`POST /lessons/:id/watch` marca a aula como assistida para o usuario autenticado.
+
+Exemplo de resposta:
+
+```json
+{
+	"lessonId": "uuid-da-aula",
+	"watched": true,
+	"watchedAt": "2026-04-11T13:00:00.000Z"
+}
+```
 
 ## Upload de videos (API)
 
