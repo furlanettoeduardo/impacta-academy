@@ -101,6 +101,18 @@ export default function ModuleLessonsPage() {
 
   const canGoToNextLesson = Boolean(currentLesson?.watched && nextLesson);
 
+  const handlePlaybackCompletion = (lessonId: string) => {
+    if (videoFinishedByLessonId[lessonId]) {
+      return;
+    }
+
+    setVideoFinishedByLessonId((prev) => ({
+      ...prev,
+      [lessonId]: true,
+    }));
+    void markLessonWatched(lessonId);
+  };
+
   const markLessonWatched = async (lessonId: string) => {
     if (watchingRequest) {
       return;
@@ -235,12 +247,17 @@ export default function ModuleLessonsPage() {
                               playsInline
                               preload="metadata"
                               src={currentLesson.videoUrl}
-                              onEnded={() => {
-                                setVideoFinishedByLessonId((prev) => ({
-                                  ...prev,
-                                  [currentLesson.id]: true,
-                                }));
-                                void markLessonWatched(currentLesson.id);
+                              onEnded={() => handlePlaybackCompletion(currentLesson.id)}
+                              onTimeUpdate={(event) => {
+                                const { currentTime, duration } = event.currentTarget;
+                                if (!Number.isFinite(duration) || duration <= 0) {
+                                  return;
+                                }
+
+                                const progress = currentTime / duration;
+                                if (progress >= 0.98) {
+                                  handlePlaybackCompletion(currentLesson.id);
+                                }
                               }}
                               onError={() =>
                                 setVideoErrorByLessonId((prev) => ({
