@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, BookOpen, GraduationCap, Sparkles } from 'lucide-react';
+import { ArrowRight, BookOpen, GraduationCap, ShoppingBag, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,6 +30,7 @@ type Course = {
   title: string;
   description?: string | null;
   createdAt: string;
+  enrolled?: boolean;
   progress?: CourseProgress;
 };
 
@@ -59,7 +60,7 @@ export default function DashboardPage() {
     ])
       .then(([userResponse, coursesResponse]) => {
         setUser(userResponse);
-        setCourses(coursesResponse);
+        setCourses(coursesResponse.filter((c) => c.enrolled));
         setError('');
       })
       .catch((err) => {
@@ -103,7 +104,7 @@ export default function DashboardPage() {
 
   const stats = [
     {
-      label: 'Cursos disponíveis',
+      label: 'Cursos matriculados',
       value: String(courses.length),
       icon: BookOpen,
       tone: 'primary' as const,
@@ -231,8 +232,18 @@ export default function DashboardPage() {
 
           {sortedCourses.length === 0 ? (
             <Card className="border-dashed">
-              <CardContent className="p-8 text-center text-sm text-muted-foreground">
-                Nenhum curso cadastrado ainda.
+              <CardContent className="space-y-3 p-8 text-center">
+                <BookOpen className="mx-auto h-10 w-10 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">
+                  Você ainda não está matriculado em nenhum curso.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => router.push('/courses')}
+                  className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-95"
+                >
+                  <ShoppingBag className="h-4 w-4" /> Ver loja de cursos
+                </button>
               </CardContent>
             </Card>
           ) : (

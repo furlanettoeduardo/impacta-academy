@@ -2,7 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, BookOpen, Calendar, Search } from 'lucide-react';
+import {
+  ArrowRight,
+  BookOpen,
+  Calendar,
+  CheckCircle2,
+  Plus,
+  Search,
+  ShoppingBag,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -24,15 +32,20 @@ type Course = {
   title: string;
   description?: string | null;
   createdAt: string;
+  enrolled?: boolean;
   progress?: CourseProgress;
 };
 
-export default function CoursesPage() {
+type EnrollResponse = { id: string; userId: string; courseId: string };
+
+export default function StorePage() {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [enrolling, setEnrolling] = useState<string | null>(null);
+  const [tab, setTab] = useState<'all' | 'available' | 'enrolled'>('all');
 
   useEffect(() => {
     const token = getToken();
@@ -57,13 +70,49 @@ export default function CoursesPage() {
       .finally(() => setLoading(false));
   }, [router]);
 
-  const filtered = useMemo(
-    () =>
-      courses.filter((course) =>
-        course.title.toLowerCase().includes(search.toLowerCase()),
-      ),
-    [courses, search],
+  const handleEnroll = async (courseId: string) => {
+    const token = getToken();
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+
+    setEnrolling(courseId);
+    setError('');
+    try {
+      await apiRequest<EnrollResponse>(`/courses/${courseId}/enroll`, {
+        method: 'POST',
+        token,
+      });
+      setCourses((prev) =>
+        prev.map((c) => (c.id === courseId ? { ...c, enrolled: true } : c)),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao matricular.');
+    } finally {
+      setEnrolling(null);
+    }
+  };
+
+  const counts = useMemo(
+    () => ({
+      all: courses.length,
+      available: courses.filter((c) => !c.enrolled).length,
+      enrolled: courses.filter((c) => c.enrolled).length,
+    }),
+    [courses],
   );
+
+  const filtered = useMemo(() => {
+    const lower = search.toLowerCase();
+    return courses
+      .filter((course) => {
+        if (tab === 'available' && course.enrolled) return false;
+        if (tab === 'enrolled' && !course.enrolled) return false;
+        return course.title.toLowerCase().includes(lower);
+      })
+      .sort((a, b) => Number(a.enrolled ?? false) - Number(b.enrolled ?? false));
+  }, [courses, search, tab]);
 
   const formatDate = (value: string) =>
     new Intl.DateTimeFormat('pt-BR', {
@@ -75,17 +124,20 @@ export default function CoursesPage() {
   return (
     <AppLayout>
       <div className="space-y-8">
-        <div>
-          <motion.h1
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-bold text-foreground"
-          >
-            Catálogo de cursos
-          </motion.h1>
-          <p className="mt-1 text-muted-foreground">
-            Explore os cursos disponíveis e continue aprendendo.
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <motion.h1
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 text-3xl font-bold text-foreground"
+            >
+              <ShoppingBag className="h-7 w-7 text-primary" />
+              Loja de cursos
+            </motion.h1>
+            <p className="mt-1 text-muted-foreground">
+              Explore os cursos disponíveis e matricule-se nos que mais te interessam.
+            </p>
+          </div>
         </div>
 
         {error ? (
@@ -103,6 +155,27 @@ export default function CoursesPage() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
+          </div>
+          <div className="inline-flex rounded-lg border border-border bg-card p-1 text-xs font-medium">
+            {([
+              { key: 'all', label: 'Todos' },
+              { key: 'available', label: 'Disponíveis' },
+              { key: 'enrolled', label: 'Matriculado' },
+            ] as const).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setTab(opt.key)}
+                className={`rounded-md px-3 py-2 transition ${
+                  tab === opt.key
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {opt.label}
+                <span className="ml-1.5 text-[10px] opacity-70">{counts[opt.key]}</span>
+              </button>
+            ))}
           </div>
         </div>
 
@@ -126,12 +199,12 @@ export default function CoursesPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04, duration: 0.35 }}
               >
-                <Card className="group flex h-full cursor-pointer flex-col overflow-hidden border-none shadow-md transition-all hover:shadow-xl">
+                <Card className="group flex h-full flex-col overflow-hidden border-none shadow-md transition-all hover:shadow-xl">
                   <div className="relative flex h-28 items-center justify-center bg-gradient-to-br from-primary via-primary to-accent">
                     <BookOpen className="h-10 w-10 text-primary-foreground/70" />
-                    {(course.progress?.percent ?? 0) > 0 ? (
-                      <span className="absolute right-3 top-3 rounded-full bg-background/95 px-2 py-0.5 text-[11px] font-medium text-primary">
-                        {course.progress?.percent}%
+                    {course.enrolled ? (
+                      <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-background/95 px-2 py-0.5 text-[11px] font-medium text-accent">
+                        <CheckCircle2 className="h-3 w-3" /> Matriculado
                       </span>
                     ) : null}
                   </div>
@@ -145,27 +218,49 @@ export default function CoursesPage() {
                       </p>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>
-                          {course.progress?.watchedLessons ?? 0}/
+                    {course.enrolled ? (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>
+                            {course.progress?.watchedLessons ?? 0}/
+                            {course.progress?.totalLessons ?? 0} aulas
+                          </span>
+                          <span className="font-semibold text-foreground">
+                            {course.progress?.percent ?? 0}%
+                          </span>
+                        </div>
+                        <Progress value={course.progress?.percent ?? 0} className="h-1.5" />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        <span>{formatDate(course.createdAt)}</span>
+                        <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5">
                           {course.progress?.totalLessons ?? 0} aulas
                         </span>
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {formatDate(course.createdAt)}
-                        </span>
                       </div>
-                      <Progress value={course.progress?.percent ?? 0} className="h-1.5" />
-                    </div>
+                    )}
 
-                    <Button
-                      size="sm"
-                      className="mt-1 h-9 w-full gap-1"
-                      onClick={() => router.push(`/courses/${course.id}`)}
-                    >
-                      Acessar curso <ArrowRight className="h-4 w-4" />
-                    </Button>
+                    {course.enrolled ? (
+                      <Button
+                        size="sm"
+                        className="mt-1 h-9 w-full gap-1"
+                        onClick={() => router.push(`/courses/${course.id}`)}
+                      >
+                        Acessar curso <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-1 h-9 w-full gap-1 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
+                        disabled={enrolling === course.id}
+                        onClick={() => handleEnroll(course.id)}
+                      >
+                        <Plus className="h-4 w-4" />
+                        {enrolling === course.id ? 'Matriculando...' : 'Matricular-se'}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>

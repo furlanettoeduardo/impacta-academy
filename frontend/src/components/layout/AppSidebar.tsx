@@ -7,6 +7,7 @@ import {
   LogOut,
   Settings,
   Shield,
+  ShoppingBag,
   Users,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -35,7 +36,8 @@ type UserInfo = {
 
 const studentItems = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'Cursos', url: '/courses', icon: BookOpen },
+  { title: 'Meus cursos', url: '/my-courses', icon: BookOpen },
+  { title: 'Loja', url: '/courses', icon: ShoppingBag },
 ];
 
 const teacherItems = [

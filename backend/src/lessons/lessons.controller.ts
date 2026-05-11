@@ -50,6 +50,6 @@ export class LessonsController {
   @UseGuards(JwtAuthGuard)
   @Post('lessons/:id/watch')
   markAsWatched(@Param('id') id: string, @Req() req: AuthRequest) {
-    return this.lessonsService.markAsWatched(id, req.user.userId);
+    return this.lessonsService.markAsWatched(id, req.user.userId, req.user.role);
   }
 }

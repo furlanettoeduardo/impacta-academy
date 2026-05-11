@@ -1,11 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EnrollmentsService } from '../enrollments/enrollments.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 
+type ViewerContext = { userId: string; role: UserRole };
+
 @Injectable()
 export class CoursesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly enrollments: EnrollmentsService,
+  ) {}
 
   async create(dto: CreateCourseDto, userId: string) {
     return this.prisma.course.create({
@@ -17,7 +24,7 @@ export class CoursesService {
     });
   }
 
-  async findAll(userId: string) {
+  async findAll(viewer: ViewerContext) {
     const courses = await this.prisma.course.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
@@ -26,18 +33,22 @@ export class CoursesService {
             lessons: {
               select: {
                 progresses: {
-                  where: { userId, watched: true },
+                  where: { userId: viewer.userId, watched: true },
                   select: { id: true },
                 },
               },
             },
           },
         },
+        enrollments: {
+          where: { userId: viewer.userId },
+          select: { id: true },
+        },
       },
     });
 
     return courses.map((course) => {
-      const { modules, ...rest } = course;
+      const { modules, enrollments, ...rest } = course;
       const totalLessons = modules.reduce((acc, m) => acc + m.lessons.length, 0);
       const watchedLessons = modules.reduce(
         (acc, m) => acc + m.lessons.filter((l) => l.progresses.length > 0).length,
@@ -47,18 +58,33 @@ export class CoursesService {
         totalLessons > 0 ? Math.round((watchedLessons / totalLessons) * 100) : 0;
       return {
         ...rest,
+        enrolled: enrollments.length > 0,
         progress: { totalLessons, watchedLessons, percent },
       };
     });
   }
 
-  async findOne(id: string, userId?: string) {
-    if (!userId) {
+  async findOne(id: string, viewer?: ViewerContext) {
+    if (!viewer) {
       const course = await this.prisma.course.findUnique({ where: { id } });
       if (!course) {
         throw new NotFoundException('Course not found');
       }
       return course;
+    }
+
+    if (viewer.role === UserRole.ALUNO) {
+      const enrolled = await this.enrollments.isEnrolled(viewer.userId, id);
+      if (!enrolled) {
+        const exists = await this.prisma.course.findUnique({
+          where: { id },
+          select: { id: true },
+        });
+        if (!exists) {
+          throw new NotFoundException('Course not found');
+        }
+        throw new ForbiddenException('Você precisa se matricular neste curso para acessá-lo.');
+      }
     }
 
     const course = await this.prisma.course.findUnique({
@@ -71,12 +97,16 @@ export class CoursesService {
               orderBy: { order: 'asc' },
               include: {
                 progresses: {
-                  where: { userId },
+                  where: { userId: viewer.userId },
                   select: { watched: true },
                 },
               },
             },
           },
+        },
+        enrollments: {
+          where: { userId: viewer.userId },
+          select: { id: true },
         },
       },
     });
@@ -122,10 +152,11 @@ export class CoursesService {
     const percent =
       totalLessons > 0 ? Math.round((watchedLessons / totalLessons) * 100) : 0;
 
-    const { modules: _modules, ...rest } = course;
+    const { modules: _modules, enrollments, ...rest } = course;
 
     return {
       ...rest,
+      enrolled: enrollments.length > 0,
       modules: modulesWithProgress,
       progress: {
         totalLessons,

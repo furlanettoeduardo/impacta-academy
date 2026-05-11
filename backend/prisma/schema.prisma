@@ -22,6 +22,7 @@ model User {
   createdAt DateTime @default(now())
   courses   Course[]
   lessonProgresses LessonProgress[]
+  enrollments      Enrollment[]
 }
 
 model Course {
@@ -32,6 +33,21 @@ model Course {
   createdAt   DateTime @default(now())
   creator     User     @relation(fields: [createdBy], references: [id])
   modules     Module[]
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  courseId   String   @db.Uuid
+  enrolledAt DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
 }
 
 model Module {

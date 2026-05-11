@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDot,
+  Lock,
   PlayCircle,
 } from 'lucide-react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -14,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { apiRequest, isAuthError } from '@/lib/api';
+import { apiRequest, ApiError, isAuthError } from '@/lib/api';
 import { clearToken, getToken } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
@@ -75,18 +76,16 @@ export default function CoursePage() {
   const [marking, setMarking] = useState(false);
   const [videoError, setVideoError] = useState<Record<string, string>>({});
   const [autoCompleted, setAutoCompleted] = useState<Record<string, boolean>>({});
+  const [enrollmentRequired, setEnrollmentRequired] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
 
-  useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
-
-    setLoading(true);
-    apiRequest<Course>(`/courses/${courseId}`, { token })
-      .then((response) => {
+  const fetchCourse = useCallback(
+    async (token: string) => {
+      setLoading(true);
+      try {
+        const response = await apiRequest<Course>(`/courses/${courseId}`, { token });
         setCourse(response);
+        setEnrollmentRequired(false);
         setError('');
 
         const flatLessons = response.modules.flatMap((m) =>
@@ -103,17 +102,53 @@ export default function CoursePage() {
           setSelectedLessonId(preferred.id);
           setOpenModuleId(preferred.moduleId);
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         const message = err instanceof Error ? err.message : 'Erro ao carregar curso.';
-        setError(message);
-        if (isAuthError(err)) {
-          clearToken();
-          router.replace('/login');
+        if (err instanceof ApiError && err.status === 403) {
+          setEnrollmentRequired(true);
+          setCourse(null);
+          setError('');
+        } else {
+          setError(message);
+          if (isAuthError(err)) {
+            clearToken();
+            router.replace('/login');
+          }
         }
-      })
-      .finally(() => setLoading(false));
-  }, [courseId, router, lessonFromUrl]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [courseId, lessonFromUrl, router],
+  );
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+
+    void fetchCourse(token);
+  }, [fetchCourse, router]);
+
+  const handleEnroll = async () => {
+    const token = getToken();
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+    setEnrolling(true);
+    setError('');
+    try {
+      await apiRequest(`/courses/${courseId}/enroll`, { method: 'POST', token });
+      await fetchCourse(token);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao matricular.');
+    } finally {
+      setEnrolling(false);
+    }
+  };
 
   const flatLessons = useMemo<Lesson[]>(
     () =>
@@ -231,6 +266,33 @@ export default function CoursePage() {
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
             <Skeleton className="aspect-video w-full" />
             <Skeleton className="h-96 w-full" />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (enrollmentRequired) {
+    return (
+      <AppLayout>
+        <div className="mx-auto max-w-xl space-y-4 rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-card to-accent/10 p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+            <Lock className="h-7 w-7" />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground">
+            Curso bloqueado
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Você precisa se matricular para acessar este curso.
+          </p>
+          {error ? <p className="text-xs text-destructive">{error}</p> : null}
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <Button onClick={handleEnroll} disabled={enrolling} className="gap-1">
+              {enrolling ? 'Matriculando...' : 'Matricular-se agora'}
+            </Button>
+            <Button variant="outline" onClick={() => router.push('/courses')}>
+              Voltar para a loja
+            </Button>
           </div>
         </div>
       </AppLayout>

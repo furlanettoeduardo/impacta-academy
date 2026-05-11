@@ -1,11 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EnrollmentsService } from '../enrollments/enrollments.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 
 @Injectable()
 export class LessonsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly enrollments: EnrollmentsService,
+  ) {}
 
   private async ensureModule(moduleId: string) {
     const module = await this.prisma.module.findUnique({ where: { id: moduleId } });
@@ -81,8 +86,26 @@ export class LessonsService {
     return this.prisma.lesson.delete({ where: { id } });
   }
 
-  async markAsWatched(id: string, userId: string) {
-    await this.ensureLesson(id);
+  async markAsWatched(id: string, userId: string, role: UserRole) {
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { id },
+      include: { module: { select: { courseId: true } } },
+    });
+    if (!lesson) {
+      throw new NotFoundException('Lesson not found');
+    }
+
+    if (role === UserRole.ALUNO) {
+      const enrolled = await this.enrollments.isEnrolled(
+        userId,
+        lesson.module.courseId,
+      );
+      if (!enrolled) {
+        throw new ForbiddenException(
+          'Você precisa se matricular no curso para registrar progresso.',
+        );
+      }
+    }
 
     return this.prisma.lessonProgress.upsert({
       where: {
