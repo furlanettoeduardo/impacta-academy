@@ -3,13 +3,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 
-type ModuleProgress = {
-  moduleId: string;
-  totalLessons: number;
-  watchedLessons: number;
-  percent: number;
-};
-
 @Injectable()
 export class CoursesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -60,64 +53,90 @@ export class CoursesService {
   }
 
   async findOne(id: string, userId?: string) {
+    if (!userId) {
+      const course = await this.prisma.course.findUnique({ where: { id } });
+      if (!course) {
+        throw new NotFoundException('Course not found');
+      }
+      return course;
+    }
+
     const course = await this.prisma.course.findUnique({
       where: { id },
-      include: userId
-        ? {
-            modules: {
+      include: {
+        modules: {
+          orderBy: { order: 'asc' },
+          include: {
+            lessons: {
               orderBy: { order: 'asc' },
-              select: {
-                id: true,
-                lessons: {
-                  select: {
-                    progresses: {
-                      where: { userId, watched: true },
-                      select: { id: true },
-                    },
-                  },
+              include: {
+                progresses: {
+                  where: { userId },
+                  select: { watched: true },
                 },
               },
             },
-          }
-        : undefined,
+          },
+        },
+      },
     });
 
     if (!course) {
       throw new NotFoundException('Course not found');
     }
 
-    if (!userId || !('modules' in course)) {
-      return course;
-    }
+    const modulesWithProgress = course.modules.map((m) => {
+      const lessons = m.lessons.map((l) => {
+        const { progresses, ...rest } = l;
+        return {
+          ...rest,
+          watched: progresses[0]?.watched ?? false,
+        };
+      });
 
-    const courseWithModules = course as typeof course & {
-      modules: {
-        id: string;
-        lessons: { progresses: { id: string }[] }[];
-      }[];
-    };
-
-    const moduleProgress: ModuleProgress[] = courseWithModules.modules.map((m) => {
-      const totalLessons = m.lessons.length;
-      const watchedLessons = m.lessons.filter((l) => l.progresses.length > 0).length;
+      const totalLessons = lessons.length;
+      const watchedLessons = lessons.filter((l) => l.watched).length;
       const percent =
         totalLessons > 0 ? Math.round((watchedLessons / totalLessons) * 100) : 0;
-      return { moduleId: m.id, totalLessons, watchedLessons, percent };
+
+      return {
+        id: m.id,
+        title: m.title,
+        order: m.order,
+        courseId: m.courseId,
+        createdAt: m.createdAt,
+        updatedAt: m.updatedAt,
+        lessons,
+        progress: { totalLessons, watchedLessons, percent },
+      };
     });
 
-    const totalLessons = moduleProgress.reduce((a, b) => a + b.totalLessons, 0);
-    const watchedLessons = moduleProgress.reduce((a, b) => a + b.watchedLessons, 0);
+    const totalLessons = modulesWithProgress.reduce(
+      (a, b) => a + b.progress.totalLessons,
+      0,
+    );
+    const watchedLessons = modulesWithProgress.reduce(
+      (a, b) => a + b.progress.watchedLessons,
+      0,
+    );
     const percent =
       totalLessons > 0 ? Math.round((watchedLessons / totalLessons) * 100) : 0;
 
-    const { modules, ...rest } = courseWithModules;
+    const { modules: _modules, ...rest } = course;
+
     return {
       ...rest,
+      modules: modulesWithProgress,
       progress: {
         totalLessons,
         watchedLessons,
         percent,
-        modules: moduleProgress,
+        modules: modulesWithProgress.map((m) => ({
+          moduleId: m.id,
+          totalLessons: m.progress.totalLessons,
+          watchedLessons: m.progress.watchedLessons,
+          percent: m.progress.percent,
+        })),
       },
     };
   }

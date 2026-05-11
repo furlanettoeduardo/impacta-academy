@@ -2,6 +2,15 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 type ApiOptions = RequestInit & { token?: string | null };
 
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 export async function apiRequest<T>(path: string, options: ApiOptions = {}) {
   const { token, headers, ...rest } = options;
   const response = await fetch(`${API_URL}${path}`, {
@@ -20,8 +29,15 @@ export async function apiRequest<T>(path: string, options: ApiOptions = {}) {
 
   if (!response.ok) {
     const message = body?.message ?? 'Erro ao processar requisicao.';
-    throw new Error(Array.isArray(message) ? message.join(', ') : message);
+    throw new ApiError(
+      Array.isArray(message) ? message.join(', ') : message,
+      response.status,
+    );
   }
 
   return body as T;
+}
+
+export function isAuthError(err: unknown): boolean {
+  return err instanceof ApiError && (err.status === 401 || err.status === 403);
 }

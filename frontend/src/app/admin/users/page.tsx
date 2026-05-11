@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, isAuthError } from '@/lib/api';
 import { clearToken, getToken } from '@/lib/auth';
 import {
   Table,
@@ -78,7 +78,10 @@ export default function AdminUsersPage() {
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : 'Erro ao carregar dados.');
-        clearToken();
+        if (isAuthError(err)) {
+          clearToken();
+          router.replace('/login');
+        }
       })
       .finally(() => setLoading(false));
   }, [router]);

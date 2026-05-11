@@ -44,12 +44,7 @@ export default function RegisterPage() {
 
   return (
     <div className="flex min-h-screen">
-      <div
-        className="relative hidden items-center justify-center overflow-hidden lg:flex lg:w-1/2"
-        style={{
-          background: 'linear-gradient(135deg, hsl(262,80%,50%), hsl(280,90%,60%))',
-        }}
-      >
+      <div className="relative hidden items-center justify-center overflow-hidden bg-gradient-to-br from-primary via-primary to-accent lg:flex lg:w-1/2">
         <div className="absolute inset-0 opacity-10">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
@@ -163,14 +158,11 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
             <Button
               type="submit"
-              className="h-12 w-full gap-2 text-base font-semibold"
-              style={{
-                background: 'linear-gradient(135deg, hsl(262,80%,50%), hsl(280,90%,60%))',
-              }}
+              className="h-12 w-full gap-2 bg-gradient-to-br from-primary to-accent text-base font-semibold text-primary-foreground hover:opacity-95"
               disabled={loading}
             >
               {loading ? 'Criando...' : 'Criar conta'}

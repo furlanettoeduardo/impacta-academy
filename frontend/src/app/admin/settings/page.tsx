@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, isAuthError } from '@/lib/api';
 import { clearToken, getToken } from '@/lib/auth';
 
 type User = {
@@ -42,7 +42,10 @@ export default function AdminSettingsPage() {
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : 'Erro ao carregar dados.');
-        clearToken();
+        if (isAuthError(err)) {
+          clearToken();
+          router.replace('/login');
+        }
       })
       .finally(() => setLoading(false));
   }, [router]);

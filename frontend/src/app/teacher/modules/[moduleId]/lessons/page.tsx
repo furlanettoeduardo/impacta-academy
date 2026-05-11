@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, isAuthError } from '@/lib/api';
 import { clearToken, getToken } from '@/lib/auth';
 
 type ModuleInfo = {
@@ -114,7 +114,10 @@ export default function ModuleLessonsPage() {
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : 'Erro ao carregar aulas.');
-        clearToken();
+        if (isAuthError(err)) {
+          clearToken();
+          router.replace('/login');
+        }
       })
       .finally(() => setLoading(false));
   }, [moduleId, router]);

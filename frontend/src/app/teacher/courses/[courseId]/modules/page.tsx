@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, isAuthError } from '@/lib/api';
 import { clearToken, getToken } from '@/lib/auth';
 
 type Course = {
@@ -72,7 +72,10 @@ export default function CourseModulesPage() {
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : 'Erro ao carregar modulos.');
-        clearToken();
+        if (isAuthError(err)) {
+          clearToken();
+          router.replace('/login');
+        }
       })
       .finally(() => setLoading(false));
   }, [courseId, router]);
