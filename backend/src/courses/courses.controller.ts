@@ -33,14 +33,14 @@ export class CoursesController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll() {
-    return this.coursesService.findAll();
+  findAll(@Req() req: AuthRequest) {
+    return this.coursesService.findAll(req.user.userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.coursesService.findOne(id);
+  findOne(@Param('id') id: string, @Req() req: AuthRequest) {
+    return this.coursesService.findOne(id, req.user.userId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

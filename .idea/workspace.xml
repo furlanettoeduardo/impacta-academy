@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="e33b9475-9930-4638-a8f2-19be0a17b0fb" name="Changes" comment="" />
+    <list default="true" id="e33b9475-9930-4638-a8f2-19be0a17b0fb" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/courses/courses.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/courses/courses.controller.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/courses/courses.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/courses/courses.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/courses/[courseId]/modules/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/courses/[courseId]/modules/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/dashboard/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/dashboard/page.tsx" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -10,24 +16,24 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 2
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2
+}</component>
   <component name="ProjectId" id="3CDLKagC74Gp3Miy6lCg3Jq8Pfg" />
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "C:/Users/eduar/OneDrive/Área de Trabalho/code/impacta-academy"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/eduar/OneDrive/Área de Trabalho/code/impacta-academy&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "postgresql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;postgresql&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="e33b9475-9930-4638-a8f2-19be0a17b0fb" name="Changes" comment="" />

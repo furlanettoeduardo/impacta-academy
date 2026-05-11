@@ -18,11 +18,18 @@ type User = {
   createdAt: string;
 };
 
+type CourseProgress = {
+  totalLessons: number;
+  watchedLessons: number;
+  percent: number;
+};
+
 type Course = {
   id: string;
   title: string;
   description?: string | null;
   createdAt: string;
+  progress?: CourseProgress;
 };
 
 const fadeUp = {
@@ -75,10 +82,23 @@ export default function DashboardPage() {
 
   const latestCourse = sortedCourses[0];
 
+  const totals = courses.reduce(
+    (acc, course) => {
+      const progress = course.progress;
+      if (!progress) return acc;
+      return {
+        watched: acc.watched + progress.watchedLessons,
+        total: acc.total + progress.totalLessons,
+      };
+    },
+    { watched: 0, total: 0 },
+  );
+  const overallPercent = totals.total > 0 ? Math.round((totals.watched / totals.total) * 100) : 0;
+
   const stats = [
     { label: 'Cursos cadastrados', value: String(courses.length), icon: BookOpen, color: 'hsl(262,80%,50%)' },
-    { label: 'Ultimo curso', value: latestCourse?.title ?? 'Nenhum', icon: ArrowRight, color: 'hsl(168,70%,45%)' },
-    { label: 'Ultima criacao', value: latestCourse ? formatDate(latestCourse.createdAt) : '—', icon: Clock, color: 'hsl(40,90%,55%)' },
+    { label: 'Aulas concluídas', value: `${totals.watched}/${totals.total}`, icon: ArrowRight, color: 'hsl(168,70%,45%)' },
+    { label: 'Progresso geral', value: `${overallPercent}%`, icon: Clock, color: 'hsl(40,90%,55%)' },
   ];
 
   if (loading) {
@@ -172,7 +192,15 @@ export default function DashboardPage() {
                         <Clock className="h-3.5 w-3.5" />
                         <span>Criado em {formatDate(course.createdAt)}</span>
                       </div>
-                      <Progress value={0} className="h-2" />
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>
+                          {course.progress?.watchedLessons ?? 0}/{course.progress?.totalLessons ?? 0} aulas
+                        </span>
+                        <span className="font-medium text-foreground">
+                          {course.progress?.percent ?? 0}%
+                        </span>
+                      </div>
+                      <Progress value={course.progress?.percent ?? 0} className="h-2" />
                     </CardContent>
                   </Card>
                 </motion.div>

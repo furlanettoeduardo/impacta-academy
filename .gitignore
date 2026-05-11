@@ -18,6 +18,7 @@ backend/.env.*
 backend/.env.docker
 frontend/.env.local
 frontend/.env.*
+claude.md
 
 # OS
 .DS_Store
