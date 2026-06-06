@@ -18,6 +18,8 @@ backend/.env.*
 backend/.env.docker
 frontend/.env.local
 frontend/.env.*
+!backend/.env.example
+!frontend/.env.example
 claude.md
 
 # OS

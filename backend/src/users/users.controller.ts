@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 
@@ -28,6 +29,13 @@ export class UsersController {
   @Get('me')
   getMe(@Req() req: AuthRequest) {
     return this.usersService.findById(req.user.userId);
+  }
+
+  // Declarado antes de PATCH :id para 'me' não ser capturado como parâmetro.
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  updateMe(@Req() req: AuthRequest, @Body() body: UpdateProfileDto) {
+    return this.usersService.updateProfile(req.user.userId, body);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

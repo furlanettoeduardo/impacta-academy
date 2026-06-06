@@ -1,5 +1,7 @@
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   OnModuleInit,
@@ -8,6 +10,7 @@ import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
@@ -143,6 +146,73 @@ export class UsersService implements OnModuleInit {
     }
 
     if (data.signatureUrl !== undefined) {
+      // String vazia remove a assinatura cadastrada.
+      updateData.signatureUrl = data.signatureUrl || null;
+    }
+
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      signatureUrl: user.signatureUrl,
+      createdAt: user.createdAt,
+    };
+  }
+
+  async updateProfile(id: string, data: UpdateProfileDto) {
+    const existing = await this.prisma.user.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (data.email && data.email !== existing.email) {
+      const emailInUse = await this.prisma.user.findUnique({
+        where: { email: data.email },
+      });
+      if (emailInUse) {
+        throw new ConflictException('Email already in use');
+      }
+    }
+
+    const updateData: {
+      name?: string;
+      email?: string;
+      password?: string;
+      signatureUrl?: string | null;
+    } = {
+      name: data.name,
+      email: data.email,
+    };
+
+    if (data.password) {
+      if (!data.currentPassword) {
+        throw new BadRequestException(
+          'Informe a senha atual para definir uma nova senha.',
+        );
+      }
+      const matches = await bcrypt.compare(
+        data.currentPassword,
+        existing.password,
+      );
+      if (!matches) {
+        throw new BadRequestException('Senha atual incorreta.');
+      }
+      updateData.password = await bcrypt.hash(data.password, 10);
+    }
+
+    if (data.signatureUrl !== undefined) {
+      if (existing.role === UserRole.ALUNO) {
+        throw new ForbiddenException(
+          'Apenas professores e administradores possuem assinatura.',
+        );
+      }
       // String vazia remove a assinatura cadastrada.
       updateData.signatureUrl = data.signatureUrl || null;
     }

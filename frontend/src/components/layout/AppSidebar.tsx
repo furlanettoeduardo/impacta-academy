@@ -8,6 +8,7 @@ import {
   Settings,
   Shield,
   ShoppingBag,
+  UserRound,
   Users,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -135,6 +136,15 @@ export function AppSidebar() {
         {canSeeAdmin ? renderGroup('Administração', adminItems) : null}
       </SidebarContent>
       <SidebarFooter className="p-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-sidebar-foreground/60 hover:text-sidebar-foreground"
+          onClick={() => router.push('/profile')}
+        >
+          <UserRound className="h-4 w-4" />
+          {!collapsed && <span>Meu perfil</span>}
+        </Button>
         <Button
           variant="ghost"
           size="sm"
