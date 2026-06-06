@@ -21,6 +21,7 @@ frontend/.env.*
 !backend/.env.example
 !frontend/.env.example
 claude.md
+docs/
 
 # OS
 .DS_Store
