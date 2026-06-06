@@ -12,6 +12,16 @@ enum UserRole {
   ALUNO
 }
 
+enum QuestionType {
+  OBJETIVA
+  DISSERTATIVA
+}
+
+enum SubmissionStatus {
+  PENDENTE
+  CORRIGIDA
+}
+
 model User {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
@@ -25,6 +35,7 @@ model User {
   lessonProgresses LessonProgress[]
   enrollments      Enrollment[]
   certificates     Certificate[]
+  submissions      AssessmentSubmission[]
 }
 
 model Course {
@@ -32,11 +43,15 @@ model Course {
   title       String
   description String?
   createdBy   String   @db.Uuid
+  assessmentsEnabled           Boolean @default(false)
+  requireAverageForCertificate Boolean @default(false)
+  minAverage                   Float   @default(7)
   createdAt   DateTime @default(now())
   creator     User     @relation(fields: [createdBy], references: [id])
   modules     Module[]
   enrollments Enrollment[]
   certificates Certificate[]
+  assessments  Assessment[]
 }
 
 model Enrollment {
@@ -100,6 +115,7 @@ model Certificate {
   userId    String   @db.Uuid
   courseId  String   @db.Uuid
   totalLessons Int   @default(0)
+  averageGrade Float?
   issuedAt  DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -108,4 +124,82 @@ model Certificate {
   @@unique([userId, courseId])
   @@index([userId])
   @@index([courseId])
+}
+
+model Assessment {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+  order       Int
+  courseId    String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course      Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions   Question[]
+  submissions AssessmentSubmission[]
+
+  @@index([courseId])
+}
+
+model Question {
+  id           String       @id @default(uuid()) @db.Uuid
+  assessmentId String       @db.Uuid
+  type         QuestionType
+  statement    String
+  points       Float
+  order        Int
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  assessment   Assessment       @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  options      QuestionOption[]
+  answers      Answer[]
+
+  @@index([assessmentId])
+}
+
+model QuestionOption {
+  id         String  @id @default(uuid()) @db.Uuid
+  questionId String  @db.Uuid
+  text       String
+  isCorrect  Boolean @default(false)
+  order      Int
+
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers    Answer[]
+
+  @@index([questionId])
+}
+
+model AssessmentSubmission {
+  id           String           @id @default(uuid()) @db.Uuid
+  assessmentId String           @db.Uuid
+  userId       String           @db.Uuid
+  status       SubmissionStatus @default(PENDENTE)
+  grade        Float?
+  submittedAt  DateTime         @default(now())
+  gradedAt     DateTime?
+
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers      Answer[]
+
+  @@unique([assessmentId, userId])
+  @@index([userId])
+}
+
+model Answer {
+  id               String  @id @default(uuid()) @db.Uuid
+  submissionId     String  @db.Uuid
+  questionId       String  @db.Uuid
+  selectedOptionId String? @db.Uuid
+  text             String?
+  earnedPoints     Float?
+
+  submission       AssessmentSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question         Question             @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption   QuestionOption?      @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([submissionId, questionId])
 }

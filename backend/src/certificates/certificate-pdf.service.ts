@@ -11,6 +11,8 @@ export type CertificatePdfData = {
   code: string;
   issuedAt: Date;
   totalLessons: number;
+  /** Média final nas avaliações (0-10), quando o curso exige média. */
+  averageGrade?: number | null;
 };
 
 type SignatureImage = {
@@ -160,16 +162,21 @@ export class CertificatePdfService {
 
     const lessonsLabel =
       data.totalLessons === 1 ? 'aula concluída' : 'aulas concluídas';
+    const metadataParts = [`${data.totalLessons} ${lessonsLabel}`];
+    if (data.averageGrade !== null && data.averageGrade !== undefined) {
+      metadataParts.push(
+        `Média final: ${data.averageGrade.toFixed(1).replace('.', ',')}`,
+      );
+    }
+    metadataParts.push(`Emitido em ${this.formatDate(data.issuedAt)}`);
     doc
       .font('Helvetica')
       .fontSize(12)
       .fillColor(GRAY)
-      .text(
-        `${data.totalLessons} ${lessonsLabel}  •  Emitido em ${this.formatDate(data.issuedAt)}`,
-        0,
-        doc.y + 16,
-        { align: 'center', width },
-      );
+      .text(metadataParts.join('  •  '), 0, doc.y + 16, {
+        align: 'center',
+        width,
+      });
 
     // Bloco de assinatura
     const centerX = width / 2;

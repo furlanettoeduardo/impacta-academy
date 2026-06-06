@@ -2,7 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Eye, FolderTree, Plus, Save, Upload, Video } from 'lucide-react';
+import {
+  BookOpen,
+  ClipboardList,
+  Eye,
+  FolderTree,
+  Plus,
+  Save,
+  Upload,
+  Video,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -376,6 +385,15 @@ export default function TeacherCourseManagePage() {
                 disabled={!selectedCourseId || loading}
               >
                 <FolderTree className="h-4 w-4" /> Gerenciar modulos
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={() => selectedCourseId && router.push(`/teacher/courses/${selectedCourseId}/assessments`)}
+                disabled={!selectedCourseId || loading}
+              >
+                <ClipboardList className="h-4 w-4" /> Gerenciar avaliações
               </Button>
               <Button
                 type="button"

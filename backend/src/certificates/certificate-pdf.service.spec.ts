@@ -39,6 +39,13 @@ describe('CertificatePdfService', () => {
     expect(buffer.length).toBeGreaterThan(1000);
   });
 
+  it('renderiza a média final quando presente', async () => {
+    const buffer = await service.render({ ...baseData, averageGrade: 8.5 });
+
+    expect(buffer.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(buffer.length).toBeGreaterThan(1000);
+  });
+
   it('renderiza títulos e nomes longos sem falhar (layout fluido)', async () => {
     const buffer = await service.render({
       ...baseData,

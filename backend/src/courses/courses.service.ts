@@ -24,6 +24,9 @@ export class CoursesService {
         title: dto.title,
         description: dto.description,
         createdBy: userId,
+        assessmentsEnabled: dto.assessmentsEnabled,
+        requireAverageForCertificate: dto.requireAverageForCertificate,
+        minAverage: dto.minAverage,
       },
     });
   }
@@ -193,6 +196,9 @@ export class CoursesService {
       data: {
         title: dto.title,
         description: dto.description,
+        assessmentsEnabled: dto.assessmentsEnabled,
+        requireAverageForCertificate: dto.requireAverageForCertificate,
+        minAverage: dto.minAverage,
       },
     });
   }

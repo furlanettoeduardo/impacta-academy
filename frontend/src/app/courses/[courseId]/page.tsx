@@ -7,6 +7,8 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDot,
+  ClipboardList,
+  Clock,
   Lock,
   PlayCircle,
 } from 'lucide-react';
@@ -63,6 +65,32 @@ type WatchedResponse = {
   watchedAt?: string | null;
 };
 
+type StudentAssessmentSummary = {
+  id: string;
+  title: string;
+  description?: string | null;
+  order: number;
+  questionCount: number;
+  submission: {
+    id: string;
+    status: 'PENDENTE' | 'CORRIGIDA';
+    grade: number | null;
+    submittedAt: string;
+  } | null;
+};
+
+type CourseAssessmentsInfo = {
+  assessmentsEnabled: boolean;
+  requireAverageForCertificate: boolean;
+  minAverage: number;
+  lessonsCompleted?: boolean;
+  pendingAssessments?: number;
+  average?: number | null;
+  assessments: StudentAssessmentSummary[];
+};
+
+const formatGrade = (value: number) => value.toFixed(1).replace('.', ',');
+
 export default function CoursePage() {
   const router = useRouter();
   const params = useParams<{ courseId: string }>();
@@ -81,6 +109,24 @@ export default function CoursePage() {
   const [enrollmentRequired, setEnrollmentRequired] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
   const [downloadingCertificate, setDownloadingCertificate] = useState(false);
+  const [assessmentsInfo, setAssessmentsInfo] =
+    useState<CourseAssessmentsInfo | null>(null);
+
+  const refreshAssessments = useCallback(
+    async (token: string) => {
+      try {
+        const assessmentsResponse = await apiRequest<CourseAssessmentsInfo>(
+          `/courses/${courseId}/assessments`,
+          { token },
+        );
+        setAssessmentsInfo(assessmentsResponse);
+      } catch {
+        // Avaliações são opcionais; falhas aqui não bloqueiam o curso.
+        setAssessmentsInfo(null);
+      }
+    },
+    [courseId],
+  );
 
   const fetchCourse = useCallback(
     async (token: string) => {
@@ -90,6 +136,7 @@ export default function CoursePage() {
         setCourse(response);
         setEnrollmentRequired(false);
         setError('');
+        await refreshAssessments(token);
 
         const flatLessons = response.modules.flatMap((m) =>
           m.lessons.map((l) => ({ ...l, moduleId: m.id })),
@@ -122,7 +169,7 @@ export default function CoursePage() {
         setLoading(false);
       }
     },
-    [courseId, lessonFromUrl, router],
+    [courseId, lessonFromUrl, refreshAssessments, router],
   );
 
   useEffect(() => {
@@ -267,13 +314,21 @@ export default function CoursePage() {
             },
           };
         });
+        // Última aula concluída: o servidor passa a liberar as avaliações,
+        // então atualizamos o status delas.
+        const remaining = flatLessons.filter(
+          (l) => !l.watched && l.id !== lessonId,
+        ).length;
+        if (remaining === 0) {
+          void refreshAssessments(token);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro ao confirmar aula assistida.');
       } finally {
         setMarking(false);
       }
     },
-    [flatLessons, marking, router],
+    [flatLessons, marking, refreshAssessments, router],
   );
 
   const handlePlaybackProgress = (lessonId: string, ratio: number) => {
@@ -608,6 +663,138 @@ export default function CoursePage() {
             </div>
           </aside>
         </div>
+
+        {assessmentsInfo?.assessmentsEnabled &&
+        assessmentsInfo.lessonsCompleted !== undefined &&
+        assessmentsInfo.assessments.length > 0 ? (
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 className="text-xl font-bold text-foreground">
+                  Avaliações do curso
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {assessmentsInfo.requireAverageForCertificate
+                    ? `Média mínima de ${formatGrade(assessmentsInfo.minAverage)} nas avaliações para emitir o certificado.`
+                    : 'As avaliações deste curso não interferem na emissão do certificado.'}
+                </p>
+              </div>
+              {assessmentsInfo.average !== null &&
+              assessmentsInfo.average !== undefined ? (
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium',
+                    (assessmentsInfo.pendingAssessments ?? 0) > 0
+                      ? 'bg-secondary text-muted-foreground'
+                      : !assessmentsInfo.requireAverageForCertificate ||
+                          assessmentsInfo.average >= assessmentsInfo.minAverage
+                        ? 'bg-accent/15 text-accent'
+                        : 'bg-destructive/10 text-destructive',
+                  )}
+                >
+                  {(assessmentsInfo.pendingAssessments ?? 0) > 0
+                    ? `Média parcial: ${formatGrade(assessmentsInfo.average)}`
+                    : `Média final: ${formatGrade(assessmentsInfo.average)}`}
+                </span>
+              ) : null}
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {assessmentsInfo.assessments.map((assessment) => {
+                // Flag exata do servidor (assistiu todas as aulas), evitando
+                // divergência com o arredondamento do percentual.
+                const unlocked = assessmentsInfo.lessonsCompleted === true;
+                const submission = assessment.submission;
+
+                return (
+                  <Card key={assessment.id} className="border-none shadow-md">
+                    <CardContent className="space-y-3 p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                            <ClipboardList className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="truncate font-semibold text-foreground">
+                              {assessment.title}
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                              {assessment.questionCount} quest
+                              {assessment.questionCount === 1 ? 'ão' : 'ões'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {submission ? (
+                          submission.status === 'CORRIGIDA' &&
+                          submission.grade !== null ? (
+                            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1 text-xs font-medium text-accent">
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Nota:{' '}
+                              {formatGrade(submission.grade)}
+                            </span>
+                          ) : (
+                            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-muted-foreground">
+                              <Clock className="h-3.5 w-3.5" /> Aguardando
+                              correção
+                            </span>
+                          )
+                        ) : !unlocked ? (
+                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-muted-foreground">
+                            <Lock className="h-3.5 w-3.5" /> Bloqueada
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {assessment.description ? (
+                        <p className="line-clamp-2 text-xs text-muted-foreground">
+                          {assessment.description}
+                        </p>
+                      ) : null}
+
+                      {submission ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full gap-1.5"
+                          onClick={() =>
+                            router.push(
+                              `/courses/${courseId}/assessments/${assessment.id}`,
+                            )
+                          }
+                        >
+                          {submission.status === 'CORRIGIDA'
+                            ? 'Ver resultado'
+                            : 'Ver envio'}
+                        </Button>
+                      ) : unlocked && assessment.questionCount > 0 ? (
+                        <Button
+                          size="sm"
+                          className="w-full gap-1.5"
+                          onClick={() =>
+                            router.push(
+                              `/courses/${courseId}/assessments/${assessment.id}`,
+                            )
+                          }
+                        >
+                          Realizar avaliação
+                        </Button>
+                      ) : unlocked ? (
+                        <p className="text-xs text-muted-foreground">
+                          Esta avaliação ainda não possui questões.
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Conclua todas as aulas do curso para liberar esta
+                          avaliação.
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
       </div>
     </AppLayout>
   );

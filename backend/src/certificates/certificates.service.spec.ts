@@ -4,6 +4,7 @@ import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EnrollmentsService } from '../enrollments/enrollments.service';
 import { UploadService } from '../upload/upload.service';
+import { AssessmentsService } from '../assessments/assessments.service';
 import { CertificatePdfService } from './certificate-pdf.service';
 import { CertificatesService } from './certificates.service';
 
@@ -20,7 +21,17 @@ describe('CertificatesService', () => {
   };
   const enrollmentsMock = { isEnrolled: jest.fn() };
   const uploadMock = { getObjectBufferFromUrl: jest.fn() };
+  const assessmentsMock = { getCourseAverageStatus: jest.fn() };
   const pdfMock = { render: jest.fn() };
+
+  const noAssessmentsRequired = {
+    required: false,
+    minAverage: 7,
+    totalAssessments: 0,
+    missing: 0,
+    pending: 0,
+    average: null,
+  };
 
   const completedCourse = {
     id: 'course-1',
@@ -43,11 +54,15 @@ describe('CertificatesService', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: EnrollmentsService, useValue: enrollmentsMock },
         { provide: UploadService, useValue: uploadMock },
+        { provide: AssessmentsService, useValue: assessmentsMock },
         { provide: CertificatePdfService, useValue: pdfMock },
       ],
     }).compile();
 
     service = module.get<CertificatesService>(CertificatesService);
+    assessmentsMock.getCourseAverageStatus.mockResolvedValue(
+      noAssessmentsRequired,
+    );
   });
 
   describe('issue', () => {
@@ -80,7 +95,11 @@ describe('CertificatesService', () => {
       expect(upsertArgs.where).toEqual({
         userId_courseId: { userId: 'user-1', courseId: 'course-1' },
       });
-      expect(upsertArgs.update).toEqual({});
+      // A reemissão (sempre revalidada pelo gate) atualiza o retrato.
+      expect(upsertArgs.update).toEqual({
+        totalLessons: 2,
+        averageGrade: null,
+      });
       expect(upsertArgs.create.userId).toBe('user-1');
       expect(upsertArgs.create.courseId).toBe('course-1');
       // A contagem de aulas é congelada na emissão.
@@ -135,6 +154,97 @@ describe('CertificatesService', () => {
         ForbiddenException,
       );
       expect(prismaMock.certificate.upsert).not.toHaveBeenCalled();
+    });
+
+    describe('quando o curso exige média nas avaliações', () => {
+      beforeEach(() => {
+        prismaMock.course.findUnique.mockResolvedValue(completedCourse);
+        enrollmentsMock.isEnrolled.mockResolvedValue(true);
+      });
+
+      it('bloqueia quando ainda não há avaliações com questões', async () => {
+        assessmentsMock.getCourseAverageStatus.mockResolvedValue({
+          required: true,
+          minAverage: 7,
+          totalAssessments: 0,
+          missing: 0,
+          pending: 0,
+          average: null,
+        });
+
+        await expect(service.issue('course-1', 'user-1')).rejects.toThrow(
+          'As avaliações deste curso ainda não estão disponíveis. Tente novamente mais tarde.',
+        );
+        expect(prismaMock.certificate.upsert).not.toHaveBeenCalled();
+      });
+
+      it('bloqueia quando há avaliações não realizadas', async () => {
+        assessmentsMock.getCourseAverageStatus.mockResolvedValue({
+          required: true,
+          minAverage: 7,
+          totalAssessments: 2,
+          missing: 1,
+          pending: 0,
+          average: null,
+        });
+
+        await expect(service.issue('course-1', 'user-1')).rejects.toThrow(
+          'Você precisa realizar todas as avaliações do curso para emitir o certificado.',
+        );
+        expect(prismaMock.certificate.upsert).not.toHaveBeenCalled();
+      });
+
+      it('bloqueia quando há avaliações aguardando correção', async () => {
+        assessmentsMock.getCourseAverageStatus.mockResolvedValue({
+          required: true,
+          minAverage: 7,
+          totalAssessments: 2,
+          missing: 0,
+          pending: 1,
+          average: null,
+        });
+
+        await expect(service.issue('course-1', 'user-1')).rejects.toThrow(
+          'Há avaliações aguardando correção do professor. Tente novamente mais tarde.',
+        );
+      });
+
+      it('bloqueia quando a média é inferior à mínima', async () => {
+        assessmentsMock.getCourseAverageStatus.mockResolvedValue({
+          required: true,
+          minAverage: 7,
+          totalAssessments: 2,
+          missing: 0,
+          pending: 0,
+          average: 6.5,
+        });
+
+        await expect(service.issue('course-1', 'user-1')).rejects.toThrow(
+          'Sua média nas avaliações (6,5) é inferior à média mínima exigida (7,0).',
+        );
+      });
+
+      it('emite congelando a média no certificado quando aprovado', async () => {
+        assessmentsMock.getCourseAverageStatus.mockResolvedValue({
+          required: true,
+          minAverage: 7,
+          totalAssessments: 2,
+          missing: 0,
+          pending: 0,
+          average: 8.5,
+        });
+        prismaMock.certificate.upsert.mockResolvedValue({ id: 'cert-1' });
+
+        await service.issue('course-1', 'user-1');
+
+        expect(prismaMock.certificate.upsert).toHaveBeenCalledTimes(1);
+        const upsertCalls = prismaMock.certificate.upsert.mock
+          .calls as unknown as [unknown][];
+        const upsertArgs = upsertCalls[0][0] as {
+          create: { averageGrade: number | null };
+        };
+        expect(upsertArgs.create.averageGrade).toBe(8.5);
+      });
     });
   });
 

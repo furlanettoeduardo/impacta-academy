@@ -8,6 +8,7 @@ import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { EnrollmentsService } from '../enrollments/enrollments.service';
 import { UploadService } from '../upload/upload.service';
+import { AssessmentsService } from '../assessments/assessments.service';
 import { CertificatePdfService } from './certificate-pdf.service';
 
 type ViewerContext = { userId: string; role: UserRole };
@@ -22,6 +23,7 @@ export class CertificatesService {
     private readonly prisma: PrismaService,
     private readonly enrollments: EnrollmentsService,
     private readonly upload: UploadService,
+    private readonly assessments: AssessmentsService,
     private readonly pdf: CertificatePdfService,
   ) {}
 
@@ -70,12 +72,53 @@ export class CertificatesService {
       );
     }
 
-    // A contagem de aulas é congelada na emissão: o certificado registra o
-    // que foi concluído naquele momento, mesmo que o curso mude depois.
+    // Quando o curso exige média nas avaliações, todas as avaliações com
+    // questões precisam estar corrigidas e a média deve atingir o mínimo.
+    const assessmentStatus = await this.assessments.getCourseAverageStatus(
+      courseId,
+      userId,
+      course,
+    );
+    let averageGrade: number | null = null;
+    if (assessmentStatus.required) {
+      if (assessmentStatus.totalAssessments === 0) {
+        throw new ForbiddenException(
+          'As avaliações deste curso ainda não estão disponíveis. Tente novamente mais tarde.',
+        );
+      }
+      if (assessmentStatus.missing > 0) {
+        throw new ForbiddenException(
+          'Você precisa realizar todas as avaliações do curso para emitir o certificado.',
+        );
+      }
+      if (assessmentStatus.pending > 0) {
+        throw new ForbiddenException(
+          'Há avaliações aguardando correção do professor. Tente novamente mais tarde.',
+        );
+      }
+      if (
+        assessmentStatus.average === null ||
+        assessmentStatus.average < assessmentStatus.minAverage
+      ) {
+        throw new ForbiddenException(
+          `Sua média nas avaliações (${this.formatGrade(assessmentStatus.average ?? 0)}) é inferior à média mínima exigida (${this.formatGrade(assessmentStatus.minAverage)}).`,
+        );
+      }
+      averageGrade = assessmentStatus.average;
+    }
+
+    // O certificado registra os valores aprovados pelo gate na emissão mais
+    // recente: a reemissão (sempre revalidada acima) atualiza o retrato.
     return this.prisma.certificate.upsert({
       where: { userId_courseId: { userId, courseId } },
-      update: {},
-      create: { userId, courseId, code: this.generateCode(), totalLessons },
+      update: { totalLessons, averageGrade },
+      create: {
+        userId,
+        courseId,
+        code: this.generateCode(),
+        totalLessons,
+        averageGrade,
+      },
       include: certificateInclude,
     });
   }
@@ -151,6 +194,7 @@ export class CertificatesService {
       code: certificate.code,
       issuedAt: certificate.issuedAt,
       totalLessons: certificate.totalLessons,
+      averageGrade: certificate.averageGrade,
     });
 
     return {
@@ -162,6 +206,10 @@ export class CertificatesService {
   private generateCode() {
     const raw = randomBytes(6).toString('hex').toUpperCase();
     return `CERT-${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`;
+  }
+
+  private formatGrade(value: number) {
+    return value.toFixed(1).replace('.', ',');
   }
 
   private slugify(value: string) {
