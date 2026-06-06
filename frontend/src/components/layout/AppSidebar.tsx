@@ -43,7 +43,6 @@ const studentItems = [
 
 const teacherItems = [
   { title: 'Painel Professor', url: '/teacher/dashboard', icon: LayoutDashboard },
-  { title: 'Gerenciar Cursos', url: '/teacher/courses/manage', icon: BookOpen },
 ];
 
 const adminItems = [
