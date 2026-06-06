@@ -6,7 +6,9 @@ export class EnrollmentsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private async ensureCourse(courseId: string) {
-    const course = await this.prisma.course.findUnique({ where: { id: courseId } });
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+    });
     if (!course) {
       throw new NotFoundException('Course not found');
     }
@@ -48,7 +50,13 @@ export class EnrollmentsService {
       orderBy: { enrolledAt: 'desc' },
       include: {
         user: {
-          select: { id: true, name: true, email: true, role: true, isActive: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            isActive: true,
+          },
         },
       },
     });

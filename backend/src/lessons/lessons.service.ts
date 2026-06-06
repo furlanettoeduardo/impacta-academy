@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EnrollmentsService } from '../enrollments/enrollments.service';
@@ -13,7 +17,9 @@ export class LessonsService {
   ) {}
 
   private async ensureModule(moduleId: string) {
-    const module = await this.prisma.module.findUnique({ where: { id: moduleId } });
+    const module = await this.prisma.module.findUnique({
+      where: { id: moduleId },
+    });
     if (!module) {
       throw new NotFoundException('Module not found');
     }

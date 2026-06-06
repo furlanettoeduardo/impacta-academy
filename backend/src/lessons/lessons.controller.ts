@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Request } from 'express';
 import { UserRole } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -50,6 +60,10 @@ export class LessonsController {
   @UseGuards(JwtAuthGuard)
   @Post('lessons/:id/watch')
   markAsWatched(@Param('id') id: string, @Req() req: AuthRequest) {
-    return this.lessonsService.markAsWatched(id, req.user.userId, req.user.role);
+    return this.lessonsService.markAsWatched(
+      id,
+      req.user.userId,
+      req.user.role,
+    );
   }
 }

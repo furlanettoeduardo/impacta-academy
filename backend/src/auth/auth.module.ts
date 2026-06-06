@@ -15,7 +15,8 @@ import { RolesGuard } from './roles.guard';
     JwtModule.register({
       secret: process.env.JWT_SECRET ?? 'change-me',
       signOptions: {
-        expiresIn: (process.env.JWT_EXPIRES_IN ?? '1d') as JwtSignOptions['expiresIn'],
+        expiresIn: (process.env.JWT_EXPIRES_IN ??
+          '1d') as JwtSignOptions['expiresIn'],
       },
     }),
   ],

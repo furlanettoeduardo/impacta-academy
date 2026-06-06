@@ -8,7 +8,9 @@ export class ModulesService {
   constructor(private readonly prisma: PrismaService) {}
 
   private async ensureCourse(courseId: string) {
-    const course = await this.prisma.course.findUnique({ where: { id: courseId } });
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+    });
     if (!course) {
       throw new NotFoundException('Course not found');
     }

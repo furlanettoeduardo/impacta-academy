@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EnrollmentsService } from '../enrollments/enrollments.service';
@@ -49,13 +53,19 @@ export class CoursesService {
 
     return courses.map((course) => {
       const { modules, enrollments, ...rest } = course;
-      const totalLessons = modules.reduce((acc, m) => acc + m.lessons.length, 0);
+      const totalLessons = modules.reduce(
+        (acc, m) => acc + m.lessons.length,
+        0,
+      );
       const watchedLessons = modules.reduce(
-        (acc, m) => acc + m.lessons.filter((l) => l.progresses.length > 0).length,
+        (acc, m) =>
+          acc + m.lessons.filter((l) => l.progresses.length > 0).length,
         0,
       );
       const percent =
-        totalLessons > 0 ? Math.round((watchedLessons / totalLessons) * 100) : 0;
+        totalLessons > 0
+          ? Math.round((watchedLessons / totalLessons) * 100)
+          : 0;
       return {
         ...rest,
         enrolled: enrollments.length > 0,
@@ -83,7 +93,9 @@ export class CoursesService {
         if (!exists) {
           throw new NotFoundException('Course not found');
         }
-        throw new ForbiddenException('Você precisa se matricular neste curso para acessá-lo.');
+        throw new ForbiddenException(
+          'Você precisa se matricular neste curso para acessá-lo.',
+        );
       }
     }
 
@@ -127,7 +139,9 @@ export class CoursesService {
       const totalLessons = lessons.length;
       const watchedLessons = lessons.filter((l) => l.watched).length;
       const percent =
-        totalLessons > 0 ? Math.round((watchedLessons / totalLessons) * 100) : 0;
+        totalLessons > 0
+          ? Math.round((watchedLessons / totalLessons) * 100)
+          : 0;
 
       return {
         id: m.id,
