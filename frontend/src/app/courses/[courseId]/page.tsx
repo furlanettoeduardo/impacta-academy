@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Award,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -17,6 +18,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiRequest, ApiError, isAuthError } from '@/lib/api';
 import { clearToken, getToken } from '@/lib/auth';
+import { downloadFile, sanitizeFileName } from '@/lib/download';
 import { cn } from '@/lib/utils';
 
 type Lesson = {
@@ -78,6 +80,7 @@ export default function CoursePage() {
   const [autoCompleted, setAutoCompleted] = useState<Record<string, boolean>>({});
   const [enrollmentRequired, setEnrollmentRequired] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
+  const [downloadingCertificate, setDownloadingCertificate] = useState(false);
 
   const fetchCourse = useCallback(
     async (token: string) => {
@@ -147,6 +150,36 @@ export default function CoursePage() {
       setError(err instanceof Error ? err.message : 'Erro ao matricular.');
     } finally {
       setEnrolling(false);
+    }
+  };
+
+  const handleDownloadCertificate = async () => {
+    if (!course || downloadingCertificate) return;
+    const token = getToken();
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+    setDownloadingCertificate(true);
+    setError('');
+    try {
+      const certificate = await apiRequest<{ id: string }>(
+        `/courses/${courseId}/certificate`,
+        { method: 'POST', token },
+      );
+      await downloadFile(
+        `/certificates/${certificate.id}/pdf`,
+        `certificado-${sanitizeFileName(course.title)}.pdf`,
+        token,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao emitir certificado.');
+      if (err instanceof ApiError && err.status === 401) {
+        clearToken();
+        router.replace('/login');
+      }
+    } finally {
+      setDownloadingCertificate(false);
     }
   };
 
@@ -344,6 +377,19 @@ export default function CoursePage() {
               <p className="mt-1.5 text-xs text-muted-foreground">
                 {course.progress.watchedLessons}/{course.progress.totalLessons} aulas concluídas
               </p>
+              {course.progress.totalLessons > 0 && course.progress.percent === 100 ? (
+                <Button
+                  size="sm"
+                  className="mt-3 w-full gap-1.5"
+                  onClick={handleDownloadCertificate}
+                  disabled={downloadingCertificate}
+                >
+                  <Award className="h-4 w-4" />
+                  {downloadingCertificate
+                    ? 'Gerando certificado...'
+                    : 'Baixar certificado'}
+                </Button>
+              ) : null}
             </div>
           </div>
         </header>

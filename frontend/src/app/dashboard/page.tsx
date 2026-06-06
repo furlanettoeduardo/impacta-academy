@@ -2,14 +2,24 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, BookOpen, GraduationCap, ShoppingBag, Sparkles } from 'lucide-react';
+import {
+  ArrowRight,
+  Award,
+  BookOpen,
+  Download,
+  GraduationCap,
+  ShoppingBag,
+  Sparkles,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiRequest, isAuthError } from '@/lib/api';
 import { clearToken, getToken } from '@/lib/auth';
+import { downloadFile, sanitizeFileName } from '@/lib/download';
 
 type User = {
   id: string;
@@ -34,6 +44,13 @@ type Course = {
   progress?: CourseProgress;
 };
 
+type Certificate = {
+  id: string;
+  code: string;
+  issuedAt: string;
+  course: { id: string; title: string };
+};
+
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.05, duration: 0.4 } }),
@@ -43,6 +60,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [downloadingCertificateId, setDownloadingCertificateId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -57,10 +76,12 @@ export default function DashboardPage() {
     Promise.all([
       apiRequest<User>('/users/me', { token }),
       apiRequest<Course[]>('/courses', { token }),
+      apiRequest<Certificate[]>('/me/certificates', { token }),
     ])
-      .then(([userResponse, coursesResponse]) => {
+      .then(([userResponse, coursesResponse, certificatesResponse]) => {
         setUser(userResponse);
         setCourses(coursesResponse.filter((c) => c.enrolled));
+        setCertificates(certificatesResponse);
         setError('');
       })
       .catch((err) => {
@@ -72,6 +93,27 @@ export default function DashboardPage() {
       })
       .finally(() => setLoading(false));
   }, [router]);
+
+  const handleDownloadCertificate = async (certificate: Certificate) => {
+    const token = getToken();
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+    setDownloadingCertificateId(certificate.id);
+    setError('');
+    try {
+      await downloadFile(
+        `/certificates/${certificate.id}/pdf`,
+        `certificado-${sanitizeFileName(certificate.course.title)}.pdf`,
+        token,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao baixar certificado.');
+    } finally {
+      setDownloadingCertificateId(null);
+    }
+  };
 
   const sortedCourses = useMemo(
     () =>
@@ -283,6 +325,67 @@ export default function DashboardPage() {
                         </div>
                         <Progress value={course.progress?.percent ?? 0} className="h-1.5" />
                       </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-foreground">Meus certificados</h2>
+
+          {certificates.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="space-y-3 p-8 text-center">
+                <Award className="mx-auto h-10 w-10 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">
+                  Conclua todas as aulas de um curso para emitir seu certificado.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {certificates.map((certificate, i) => (
+                <motion.div
+                  key={certificate.id}
+                  custom={i + 6}
+                  variants={fadeUp}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <Card className="border-none shadow-md transition-shadow hover:shadow-lg">
+                    <CardContent className="space-y-3 p-5">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent">
+                          <Award className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="truncate font-semibold text-foreground">
+                            {certificate.course.title}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            Emitido em{' '}
+                            {new Date(certificate.issuedAt).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        Código: {certificate.code}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full gap-1.5"
+                        onClick={() => handleDownloadCertificate(certificate)}
+                        disabled={downloadingCertificateId === certificate.id}
+                      >
+                        <Download className="h-4 w-4" />
+                        {downloadingCertificateId === certificate.id
+                          ? 'Baixando...'
+                          : 'Baixar PDF'}
+                      </Button>
                     </CardContent>
                   </Card>
                 </motion.div>

@@ -33,4 +33,25 @@ export class UploadController {
     const url = await this.uploadService.uploadVideo(file);
     return { url };
   }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.PROFESSOR)
+  @Post('signature')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 2 * 1024 * 1024 } }),
+  )
+  async uploadSignature(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException(
+        'Apenas arquivos de imagem são permitidos.',
+      );
+    }
+
+    const url = await this.uploadService.uploadSignature(file);
+    return { url };
+  }
 }

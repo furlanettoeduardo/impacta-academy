@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { PencilLine, Save, Trash2, Users, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SignaturePad, type SignaturePadHandle } from '@/components/SignaturePad';
 import { apiRequest, isAuthError } from '@/lib/api';
 import { clearToken, getToken } from '@/lib/auth';
 import {
@@ -26,8 +27,30 @@ type UserInfo = {
   email: string;
   role: string;
   isActive: boolean;
+  signatureUrl?: string | null;
   createdAt: string;
 };
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+async function uploadSignature(blob: Blob, token: string): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', blob, 'assinatura.png');
+
+  const response = await fetch(`${API_URL}/upload/signature`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+
+  const body = await response.json();
+  if (!response.ok) {
+    const message = body?.message ?? 'Erro ao enviar assinatura.';
+    throw new Error(Array.isArray(message) ? message.join(', ') : message);
+  }
+
+  return body.url as string;
+}
 
 type CurrentUser = {
   role: string;
@@ -51,6 +74,9 @@ export default function AdminUsersPage() {
   const [editPassword, setEditPassword] = useState('');
   const [editRole, setEditRole] = useState('ALUNO');
   const [editActive, setEditActive] = useState(true);
+  const [editRemoveSignature, setEditRemoveSignature] = useState(false);
+  const createPadRef = useRef<SignaturePadHandle>(null);
+  const editPadRef = useRef<SignaturePadHandle>(null);
 
   const loadUsers = async (token: string) => {
     const data = await apiRequest<UserInfo[]>('/users', { token });
@@ -102,6 +128,15 @@ export default function AdminUsersPage() {
     setError('');
 
     try {
+      let signatureUrl: string | undefined;
+      const pad = createPadRef.current;
+      if (userRole !== 'ALUNO' && pad && !pad.isEmpty()) {
+        const blob = await pad.toBlob();
+        if (blob) {
+          signatureUrl = await uploadSignature(blob, token);
+        }
+      }
+
       await apiRequest('/users', {
         method: 'POST',
         token,
@@ -111,6 +146,7 @@ export default function AdminUsersPage() {
           password: userPassword,
           role: userRole,
           isActive: userActive,
+          ...(signatureUrl ? { signatureUrl } : {}),
         }),
       });
       setUserName('');
@@ -118,6 +154,7 @@ export default function AdminUsersPage() {
       setUserPassword('');
       setUserRole('ALUNO');
       setUserActive(true);
+      createPadRef.current?.clear();
       await loadUsers(token);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao cadastrar usuário.');
@@ -133,6 +170,7 @@ export default function AdminUsersPage() {
     setEditPassword('');
     setEditRole(user.role);
     setEditActive(user.isActive);
+    setEditRemoveSignature(false);
   };
 
   const cancelEdit = () => {
@@ -142,6 +180,7 @@ export default function AdminUsersPage() {
     setEditPassword('');
     setEditRole('ALUNO');
     setEditActive(true);
+    setEditRemoveSignature(false);
   };
 
   const handleUpdate = async (id: string) => {
@@ -160,6 +199,18 @@ export default function AdminUsersPage() {
     setError('');
 
     try {
+      let signatureUrl: string | undefined;
+      const pad = editPadRef.current;
+      if (editRole !== 'ALUNO' && pad && !pad.isEmpty()) {
+        const blob = await pad.toBlob();
+        if (blob) {
+          signatureUrl = await uploadSignature(blob, token);
+        }
+      } else if (editRemoveSignature) {
+        // String vazia remove a assinatura no backend.
+        signatureUrl = '';
+      }
+
       await apiRequest(`/users/${id}`, {
         method: 'PATCH',
         token,
@@ -169,6 +220,7 @@ export default function AdminUsersPage() {
           password: editPassword.trim() || undefined,
           role: editRole,
           isActive: editActive,
+          ...(signatureUrl !== undefined ? { signatureUrl } : {}),
         }),
       });
       await loadUsers(token);
@@ -284,6 +336,16 @@ export default function AdminUsersPage() {
                 </select>
               </div>
             </div>
+            {userRole !== 'ALUNO' ? (
+              <div className="max-w-xl space-y-2">
+                <Label>Assinatura (exibida nos certificados)</Label>
+                <SignaturePad ref={createPadRef} disabled={savingUser} />
+                <p className="text-xs text-muted-foreground">
+                  Desenhe a assinatura com o mouse ou o dedo. O fundo é removido
+                  automaticamente e a imagem é salva em WebP.
+                </p>
+              </div>
+            ) : null}
             <Button className="gap-2" onClick={handleCreateUser} disabled={savingUser}>
               <Save className="h-4 w-4" /> Cadastrar usuário
             </Button>
@@ -318,7 +380,8 @@ export default function AdminUsersPage() {
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => (
-                    <TableRow key={user.id}>
+                    <Fragment key={user.id}>
+                    <TableRow>
                       {editingId === user.id ? (
                         <>
                           <TableCell>
@@ -410,6 +473,41 @@ export default function AdminUsersPage() {
                         </>
                       )}
                     </TableRow>
+                    {editingId === user.id && editRole !== 'ALUNO' ? (
+                      <TableRow>
+                        <TableCell colSpan={6}>
+                          <div className="max-w-xl space-y-3 py-2">
+                            <Label>Assinatura (exibida nos certificados)</Label>
+                            {user.signatureUrl && !editRemoveSignature ? (
+                              <div className="flex items-center gap-3">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={user.signatureUrl}
+                                  alt="Assinatura atual"
+                                  className="h-12 rounded-md border border-border bg-white p-1"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setEditRemoveSignature(true)}
+                                  disabled={savingUser}
+                                >
+                                  <Trash2 className="h-4 w-4" /> Remover assinatura
+                                </Button>
+                              </div>
+                            ) : null}
+                            <SignaturePad ref={editPadRef} disabled={savingUser} />
+                            <p className="text-xs text-muted-foreground">
+                              {user.signatureUrl && !editRemoveSignature
+                                ? 'Desenhe para substituir a assinatura atual ou deixe em branco para mantê-la.'
+                                : 'Desenhe a assinatura com o mouse ou o dedo.'}
+                            </p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                    </Fragment>
                   ))}
                 </TableBody>
               </Table>

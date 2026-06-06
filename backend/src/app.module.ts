@@ -9,6 +9,7 @@ import { ModulesModule } from './modules/modules.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { UploadModule } from './upload/upload.module';
 import { EnrollmentsModule } from './enrollments/enrollments.module';
+import { CertificatesModule } from './certificates/certificates.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { EnrollmentsModule } from './enrollments/enrollments.module';
     LessonsModule,
     UploadModule,
     EnrollmentsModule,
+    CertificatesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

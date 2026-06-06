@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -50,6 +55,7 @@ export class UsersService implements OnModuleInit {
       email: user.email,
       role: user.role,
       isActive: user.isActive,
+      signatureUrl: user.signatureUrl,
       createdAt: user.createdAt,
     };
   }
@@ -65,6 +71,7 @@ export class UsersService implements OnModuleInit {
       email: user.email,
       role: user.role,
       isActive: user.isActive,
+      signatureUrl: user.signatureUrl,
       createdAt: user.createdAt,
     }));
   }
@@ -87,6 +94,7 @@ export class UsersService implements OnModuleInit {
         password: passwordHash,
         role: data.role,
         isActive: data.isActive ?? true,
+        signatureUrl: data.signatureUrl || null,
       },
     });
 
@@ -96,6 +104,7 @@ export class UsersService implements OnModuleInit {
       email: user.email,
       role: user.role,
       isActive: user.isActive,
+      signatureUrl: user.signatureUrl,
       createdAt: user.createdAt,
     };
   }
@@ -121,6 +130,7 @@ export class UsersService implements OnModuleInit {
       password?: string;
       role?: UserRole;
       isActive?: boolean;
+      signatureUrl?: string | null;
     } = {
       name: data.name,
       email: data.email,
@@ -130,6 +140,11 @@ export class UsersService implements OnModuleInit {
 
     if (data.password) {
       updateData.password = await bcrypt.hash(data.password, 10);
+    }
+
+    if (data.signatureUrl !== undefined) {
+      // String vazia remove a assinatura cadastrada.
+      updateData.signatureUrl = data.signatureUrl || null;
     }
 
     const user = await this.prisma.user.update({
@@ -143,6 +158,7 @@ export class UsersService implements OnModuleInit {
       email: user.email,
       role: user.role,
       isActive: user.isActive,
+      signatureUrl: user.signatureUrl,
       createdAt: user.createdAt,
     };
   }
@@ -167,6 +183,7 @@ export class UsersService implements OnModuleInit {
       email: user.email,
       role: user.role,
       isActive: user.isActive,
+      signatureUrl: user.signatureUrl,
       createdAt: user.createdAt,
     };
   }
